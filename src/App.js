@@ -2,21 +2,8 @@
  * ============================================
  * APLICACIÓN PRINCIPAL - Sistema Pupusería
  * ============================================
- * Componente raíz que maneja la navegación y estado global
- * Sistema mobile-first para control de ventas de pupusas
- * 
- * NUEVA FUNCIONALIDAD:
- * - Sistema de autenticación JWT
- * - Login/Register integrado
- * - Sesión persistente con Remember Me
- * - Auto-refresh de tokens
- * - Protección de rutas
- * 
- * PALETA DE COLORES:
- * - Azul primario: from-blue-600 to-cyan-600
- * - Verde esmeralda: para ventas y confirmaciones
- * - Índigo/Púrpura: para entregas y elementos secundarios
- * - Fondo: gradient from-slate-50 to-blue-50
+ * IMPORTANTE: Este archivo YA NO necesita setupAxiosInterceptors
+ * porque api.js ya lo maneja automáticamente
  */
 
 import { useState, useEffect } from 'react';
@@ -30,12 +17,11 @@ import Products from './components/Products';
 import DailyReport from './components/DailyReport';
 import OpenDays from './components/OpenDays';
 
-import {
-  isAuthenticated,
-  logout,
+import { 
+  isAuthenticated, 
+  logout, 
   getUserFromStorage,
-  getTrialDaysRemaining,
-  setupAxiosInterceptors
+  loginWithRemember
 } from './services/auth';
 
 function App() {
@@ -47,26 +33,47 @@ function App() {
     new Date().toISOString().split('T')[0]
   );
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   /**
    * Verificar autenticación al montar el componente
    */
   useEffect(() => {
-    const checkAuth = () => {
-      if (isAuthenticated()) {
-        const user = getUserFromStorage();
-        setCurrentUser(user);
-        setIsLoggedIn(true);
+    const checkAuth = async () => {
+      console.log('Verificando autenticación...');
+      
+      try {
+        // Primero verificar si hay token de acceso
+        if (isAuthenticated()) {
+          const user = getUserFromStorage();
+          console.log('Usuario encontrado en localStorage:', user);
+          setCurrentUser(user);
+          setIsLoggedIn(true);
+        } else {
+          // Si no hay token, intentar con remember token
+          const rememberToken = localStorage.getItem('rememberToken');
+          
+          if (rememberToken) {
+            console.log('Intentando login con remember token...');
+            try {
+              const response = await loginWithRemember(rememberToken);
+              console.log('Login automático exitoso:', response.user);
+              setCurrentUser(response.user);
+              setIsLoggedIn(true);
+            } catch (error) {
+              console.error('Error en login automático:', error);
+              localStorage.removeItem('rememberToken');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error verificando autenticación:', error);
+      } finally {
+        setIsCheckingAuth(false);
       }
     };
 
     checkAuth();
-
-    // Configurar interceptores de axios para manejo de tokens
-    setupAxiosInterceptors(() => {
-      // Callback cuando el usuario no está autorizado
-      handleLogout();
-    });
   }, []);
 
   /**
@@ -81,7 +88,7 @@ function App() {
       report: 'Reporte Diario',
       openDays: 'Días Abiertos'
     };
-
+    
     const businessName = currentUser?.businessName || 'Negocios de mi linda';
     document.title = `${titles[currentView]} - ${businessName}`;
   }, [currentView, currentUser]);
@@ -90,6 +97,7 @@ function App() {
    * Manejar login exitoso
    */
   const handleLoginSuccess = (user) => {
+    console.log('Login exitoso, usuario:', user);
     setCurrentUser(user);
     setIsLoggedIn(true);
     setCurrentView('dashboard');
@@ -100,6 +108,7 @@ function App() {
    */
   const handleLogout = async () => {
     try {
+      console.log('Cerrando sesión...');
       await logout();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
@@ -170,6 +179,20 @@ function App() {
   };
 
   /**
+   * Mostrar loading mientras verifica auth
+   */
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  /**
    * Si no está autenticado, mostrar Login
    */
   if (!isLoggedIn) {
@@ -179,6 +202,17 @@ function App() {
   /**
    * Calcular días restantes de trial
    */
+  const getTrialDaysRemaining = () => {
+    if (!currentUser || !currentUser.trialEndsAt) return 0;
+    
+    const trialEnd = new Date(currentUser.trialEndsAt);
+    const now = new Date();
+    const diffTime = trialEnd - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, diffDays);
+  };
+
   const trialDaysRemaining = getTrialDaysRemaining();
   const showTrialWarning = trialDaysRemaining <= 5 && trialDaysRemaining > 0;
 
@@ -236,7 +270,7 @@ function App() {
                         </p>
                       )}
                     </div>
-
+                    
                     <button
                       onClick={handleLogout}
                       className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
@@ -261,8 +295,8 @@ function App() {
 
       {/* Cerrar menú al hacer click fuera */}
       {showUserMenu && (
-        <div
-          className="fixed inset-0 z-40"
+        <div 
+          className="fixed inset-0 z-40" 
           onClick={() => setShowUserMenu(false)}
         />
       )}
