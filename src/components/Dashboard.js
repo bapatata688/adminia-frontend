@@ -10,9 +10,15 @@
  * - Bordes y sombras sutiles
  */
 
-import React from 'react';
-import { useState, useEffect } from 'react';
-import { ordersAPI, reportsAPI } from '../services/api';
+/**
+ * ============================================
+ * DASHBOARD - Vista Principal
+ * ============================================
+ * CORREGIDO: Maneja correctamente la estructura de respuesta del backend
+ */
+
+import { useState, useEffect, useCallback } from 'react';
+import { reportsAPI } from '../services/api';
 import {
   DollarSign,
   ShoppingBag,
@@ -36,31 +42,50 @@ function Dashboard({ onNavigate, selectedDate }) {
     products: []
   });
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [selectedDate]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
+      console.log('Cargando reporte para fecha:', selectedDate);
+
       // Obtener reporte del día
-      const reportData = await reportsAPI.getDaily(selectedDate);
+      const response = await reportsAPI.getDaily(selectedDate);
+
+      console.log('Respuesta completa del backend:', response);
+
+      // La respuesta de axios viene en response.data
+      // Y tu backend devuelve { success: true, data: { ... } }
+      const reportData = response.data;
+
+      console.log('Datos del reporte:', reportData);
+
+      // Verificar estructura
+      if (!reportData || !reportData.data || !reportData.data.totals) {
+        console.error('Estructura de respuesta inválida:', reportData);
+        throw new Error('Estructura de respuesta inválida del servidor');
+      }
 
       setSummary({
-        totalSales: reportData.data.totals.sales,
-        orderCount: reportData.data.totals.orders,
-        deliveryCount: reportData.data.totals.delivery_orders,
+        totalSales: reportData.data.totals.sales || 0,
+        orderCount: reportData.data.totals.orders || 0,
+        deliveryCount: reportData.data.totals.delivery_orders || 0,
         products: reportData.data.products || []
       });
+
     } catch (err) {
-      setError(err.message);
+      const errorMessage = err.response?.data?.error || err.message || 'Error desconocido';
+      setError(errorMessage);
       console.error('Error cargando dashboard:', err);
+      console.error('Detalles del error:', err.response);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   if (loading) {
     return (
@@ -90,6 +115,12 @@ function Dashboard({ onNavigate, selectedDate }) {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl animate-slideDown">
           <p className="font-semibold">Error</p>
           <p className="text-sm">{error}</p>
+          <button
+            onClick={loadDashboardData}
+            className="mt-2 text-sm underline hover:no-underline"
+          >
+            Intentar de nuevo
+          </button>
         </div>
       )}
 
@@ -238,7 +269,7 @@ function Dashboard({ onNavigate, selectedDate }) {
       )}
 
       {/* Sin datos */}
-      {summary.orderCount === 0 && !loading && (
+      {summary.orderCount === 0 && !loading && !error && (
         <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-8 text-center animate-fadeIn">
           <Package className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h3 className="text-xl font-semibold text-gray-800 mb-2">
@@ -257,7 +288,7 @@ function Dashboard({ onNavigate, selectedDate }) {
       )}
 
       {/* Animaciones CSS */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
