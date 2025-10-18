@@ -1,276 +1,182 @@
 /**
  * ============================================
- * SERVICIO API - Comunicación con Backend
+ * API SERVICE - Comunicación con Backend
  * ============================================
- * Centraliza todas las llamadas HTTP al backend
- * Maneja errores y formatos de respuesta
+ * Archivo: src/services/api.js
+ * Propósito: Centralizar todas las llamadas HTTP al backend
+ * 
+ * CORREGIDO: Incluye interceptor para agregar token automáticamente
  */
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://pupuseria-backend.onrender.com/api';
-// Helper para manejar respuestas
-const handleResponse = async (response) => {
-  const data = await response.json();
+import axios from 'axios';
 
-  if (!response.ok) {
-    throw new Error(data.error || 'Error en la petición');
+// Configurar URL base según ambiente
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+console.log('API URL configurada:', API_URL);
+
+// Crear instancia de axios
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json'
   }
-
-  return data;
-};
-
-// Helper para manejar errores
-const handleError = (error) => {
-  console.error('API Error:', error);
-  throw error;
-};
+});
 
 // ============================================
-// PRODUCTOS
+// INTERCEPTOR: Agregar token a todas las peticiones
+// ============================================
+api.interceptors.request.use(
+  (config) => {
+    // Obtener token de localStorage
+    const token = localStorage.getItem('accessToken');
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Token agregado a request:', config.url);
+    } else {
+      console.warn('No hay token disponible para:', config.url);
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// ============================================
+// INTERCEPTOR: Manejar respuestas y errores
+// ============================================
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Si es error 401 y no es un retry
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      // Intentar refrescar token
+      const refreshToken = localStorage.getItem('refreshToken');
+
+      if (refreshToken) {
+        try {
+          console.log('Intentando refrescar token...');
+
+          const response = await axios.post(`${API_URL}/auth/refresh`, {
+            refreshToken
+          });
+
+          const { accessToken } = response.data;
+
+          // Guardar nuevo token
+          localStorage.setItem('accessToken', accessToken);
+
+          // Reintentar request original con nuevo token
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return api(originalRequest);
+
+        } catch (refreshError) {
+          console.error('Error refrescando token:', refreshError);
+
+          // Limpiar localStorage y redirigir a login
+          localStorage.clear();
+          window.location.href = '/';
+
+          return Promise.reject(refreshError);
+        }
+      } else {
+        console.warn('No hay refresh token, redirigiendo a login');
+        localStorage.clear();
+        window.location.href = '/';
+      }
+    }
+
+    // Manejar otros errores
+    const errorMessage = error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      'Error en la petición';
+
+    console.error('API Error:', errorMessage);
+
+    return Promise.reject(new Error(errorMessage));
+  }
+);
+
+// ============================================
+// PRODUCTS API
 // ============================================
 export const productsAPI = {
-  // Obtener todos los productos
-  getAll: async () => {
-    try {
-      const response = await fetch(`${API_URL}/products`);
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  getAll: () => api.get('/products'),
 
-  // Obtener un producto por ID
-  getById: async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/products/${id}`);
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  getById: (id) => api.get(`/products/${id}`),
 
-  // Crear producto
-  create: async (productData) => {
-    try {
-      const response = await fetch(`${API_URL}/products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productData)
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  create: (data) => api.post('/products', data),
 
-  // Actualizar producto
-  update: async (id, productData) => {
-    try {
-      const response = await fetch(`${API_URL}/products/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productData)
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  update: (id, data) => api.put(`/products/${id}`, data),
 
-  // Eliminar producto
-  delete: async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/products/${id}`, {
-        method: 'DELETE'
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  }
+  delete: (id) => api.delete(`/products/${id}`)
 };
 
 // ============================================
-// PEDIDOS
+// ORDERS API
 // ============================================
 export const ordersAPI = {
-  // Obtener pedidos por fecha
-  getByDate: async (date) => {
-    try {
-      const response = await fetch(`${API_URL}/orders?date=${date}`);
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  getByDate: (date) => api.get('/orders', { params: { date } }),
 
-  // Obtener un pedido por ID
-  getById: async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/orders/${id}`);
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  getById: (id) => api.get(`/orders/${id}`),
 
-  // Crear pedido
-  create: async (orderData) => {
-    try {
-      const response = await fetch(`${API_URL}/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  create: (data) => api.post('/orders', data),
 
-  // Actualizar pedido
-  update: async (id, orderData) => {
-    try {
-      const response = await fetch(`${API_URL}/orders/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  update: (id, data) => api.put(`/orders/${id}`, data),
 
-  // Eliminar pedido
-  delete: async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/orders/${id}`, {
-        method: 'DELETE'
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  }
+  delete: (id) => api.delete(`/orders/${id}`)
 };
 
 // ============================================
-// REPORTES
+// REPORTS API
 // ============================================
 export const reportsAPI = {
-  // Obtener reporte diario
-  getDaily: async (date) => {
-    try {
-      const response = await fetch(`${API_URL}/reports/daily/${date}`);
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  getDaily: (date) => api.get(`/reports/daily/${date}`),
 
-  // Exportar CSV
-  exportCSV: async (date) => {
-    try {
-      const response = await fetch(`${API_URL}/reports/daily/${date}/export`);
+  exportCSV: (date) => api.get(`/reports/daily/${date}/export`, {
+    responseType: 'blob'
+  }),
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error al exportar CSV');
-      }
-
-      // Descargar archivo
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ventas_${date}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      return { success: true };
-    } catch (error) {
-      return handleError(error);
-    }
-  },
-
-  // Obtener resumen de período
-  getSummary: async (startDate, endDate) => {
-    try {
-      const params = new URLSearchParams();
-      if (startDate) params.append('start_date', startDate);
-      if (endDate) params.append('end_date', endDate);
-
-      const response = await fetch(`${API_URL}/reports/summary?${params}`);
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  }
+  getSummary: (startDate, endDate) => api.get('/reports/summary', {
+    params: { start_date: startDate, end_date: endDate }
+  })
 };
 
 // ============================================
-// DÍAS ABIERTOS
+// OPEN DAYS API
 // ============================================
 export const openDaysAPI = {
-  // Obtener todos los días
-  getAll: async (startDate, endDate) => {
-    try {
-      const params = new URLSearchParams();
-      if (startDate) params.append('start_date', startDate);
-      if (endDate) params.append('end_date', endDate);
+  getAll: (startDate, endDate) => api.get('/open-days', {
+    params: { start_date: startDate, end_date: endDate }
+  }),
 
-      const url = `${API_URL}/open-days${params.toString() ? '?' + params : ''}`;
-      const response = await fetch(url);
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  getByDate: (date) => api.get(`/open-days/${date}`),
 
-  // Obtener estado de un día
-  getByDate: async (date) => {
-    try {
-      const response = await fetch(`${API_URL}/open-days/${date}`);
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  update: (date, isOpen) => api.put(`/open-days/${date}`, { is_open: isOpen }),
 
-  // Actualizar estado de un día
-  update: async (date, isOpen) => {
-    try {
-      const response = await fetch(`${API_URL}/open-days/${date}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_open: isOpen })
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  },
+  createMultiple: (dates) => api.post('/open-days', { dates }),
 
-  // Marcar múltiples días
-  updateMultiple: async (dates) => {
-    try {
-      const response = await fetch(`${API_URL}/open-days`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dates })
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  }
+  delete: (date) => api.delete(`/open-days/${date}`)
 };
 
-export default {
-  products: productsAPI,
-  orders: ordersAPI,
-  reports: reportsAPI,
-  openDays: openDaysAPI
+// ============================================
+// EXPORT DEFAULT
+// ============================================
+const apiServices = {
+  productsAPI,
+  ordersAPI,
+  reportsAPI,
+  openDaysAPI
 };
+
+export default apiServices;
