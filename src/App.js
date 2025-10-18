@@ -1,13 +1,12 @@
 /**
  * ============================================
- * APLICACIÓN PRINCIPAL - Sistema Pupusería
+ * APP PRINCIPAL - RESPONSIVE
  * ============================================
- * IMPORTANTE: Este archivo YA NO necesita setupAxiosInterceptors
- * porque api.js ya lo maneja automáticamente
+ * Optimizado para móviles, tablets y desktops
  */
 
 import { useState, useEffect } from 'react';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Menu, X as CloseIcon } from 'lucide-react';
 
 import Login from './components/Auth/Login';
 import Dashboard from './components/Dashboard';
@@ -17,9 +16,9 @@ import Products from './components/Products';
 import DailyReport from './components/DailyReport';
 import OpenDays from './components/OpenDays';
 
-import { 
-  isAuthenticated, 
-  logout, 
+import {
+  isAuthenticated,
+  logout,
   getUserFromStorage,
   loginWithRemember
 } from './services/auth';
@@ -33,41 +32,40 @@ function App() {
     new Date().toISOString().split('T')[0]
   );
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   /**
-   * Verificar autenticación al montar el componente
+   * Verificar autenticación al montar
    */
   useEffect(() => {
     const checkAuth = async () => {
-      console.log('Verificando autenticación...');
-      
+      console.log('🔐 Verificando autenticación...');
+
       try {
-        // Primero verificar si hay token de acceso
         if (isAuthenticated()) {
           const user = getUserFromStorage();
-          console.log('Usuario encontrado en localStorage:', user);
+          console.log('✅ Usuario encontrado:', user);
           setCurrentUser(user);
           setIsLoggedIn(true);
         } else {
-          // Si no hay token, intentar con remember token
           const rememberToken = localStorage.getItem('rememberToken');
-          
+
           if (rememberToken) {
-            console.log('Intentando login con remember token...');
+            console.log('🔄 Intentando login automático...');
             try {
               const response = await loginWithRemember(rememberToken);
-              console.log('Login automático exitoso:', response.user);
+              console.log('✅ Login automático exitoso');
               setCurrentUser(response.user);
               setIsLoggedIn(true);
             } catch (error) {
-              console.error('Error en login automático:', error);
+              console.error('❌ Error en login automático:', error);
               localStorage.removeItem('rememberToken');
             }
           }
         }
       } catch (error) {
-        console.error('Error verificando autenticación:', error);
+        console.error('❌ Error verificando autenticación:', error);
       } finally {
         setIsCheckingAuth(false);
       }
@@ -77,7 +75,7 @@ function App() {
   }, []);
 
   /**
-   * Actualizar título de la página según la vista
+   * Actualizar título según vista
    */
   useEffect(() => {
     const titles = {
@@ -88,41 +86,41 @@ function App() {
       report: 'Reporte Diario',
       openDays: 'Días Abiertos'
     };
-    
-    const businessName = currentUser?.businessName || 'Negocios de mi linda';
+
+    const businessName = currentUser?.businessName || 'Sistema de Ventas';
     document.title = `${titles[currentView]} - ${businessName}`;
   }, [currentView, currentUser]);
 
   /**
-   * Manejar login exitoso
+   * Cerrar menús al cambiar de vista
    */
+  useEffect(() => {
+    setShowMobileMenu(false);
+    setShowUserMenu(false);
+  }, [currentView]);
+
   const handleLoginSuccess = (user) => {
-    console.log('Login exitoso, usuario:', user);
+    console.log('✅ Login exitoso:', user);
     setCurrentUser(user);
     setIsLoggedIn(true);
     setCurrentView('dashboard');
   };
 
-  /**
-   * Manejar logout
-   */
   const handleLogout = async () => {
     try {
-      console.log('Cerrando sesión...');
+      console.log('👋 Cerrando sesión...');
       await logout();
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error('❌ Error al cerrar sesión:', error);
     } finally {
       setCurrentUser(null);
       setIsLoggedIn(false);
       setCurrentView('dashboard');
       setShowUserMenu(false);
+      setShowMobileMenu(false);
     }
   };
 
-  /**
-   * Navegar entre vistas
-   */
   const navigate = (view, options = {}) => {
     setCurrentView(view);
     if (options.editOrder) {
@@ -130,17 +128,12 @@ function App() {
     } else {
       setEditingOrder(null);
     }
-    setShowUserMenu(false);
   };
 
-  /**
-   * Renderizar vista actual
-   */
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
         return <Dashboard onNavigate={navigate} selectedDate={selectedDate} />;
-
       case 'newOrder':
         return (
           <NewOrder
@@ -149,7 +142,6 @@ function App() {
             selectedDate={selectedDate}
           />
         );
-
       case 'orders':
         return (
           <OrdersList
@@ -157,10 +149,8 @@ function App() {
             selectedDate={selectedDate}
           />
         );
-
       case 'products':
         return <Products onNavigate={navigate} />;
-
       case 'report':
         return (
           <DailyReport
@@ -169,18 +159,24 @@ function App() {
             onDateChange={setSelectedDate}
           />
         );
-
       case 'openDays':
         return <OpenDays onNavigate={navigate} />;
-
       default:
         return <Dashboard onNavigate={navigate} selectedDate={selectedDate} />;
     }
   };
 
-  /**
-   * Mostrar loading mientras verifica auth
-   */
+  const getTrialDaysRemaining = () => {
+    if (!currentUser || !currentUser.trialEndsAt) return 0;
+
+    const trialEnd = new Date(currentUser.trialEndsAt);
+    const now = new Date();
+    const diffTime = trialEnd - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return Math.max(0, diffDays);
+  };
+
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -192,85 +188,69 @@ function App() {
     );
   }
 
-  /**
-   * Si no está autenticado, mostrar Login
-   */
   if (!isLoggedIn) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
-
-  /**
-   * Calcular días restantes de trial
-   */
-  const getTrialDaysRemaining = () => {
-    if (!currentUser || !currentUser.trialEndsAt) return 0;
-    
-    const trialEnd = new Date(currentUser.trialEndsAt);
-    const now = new Date();
-    const diffTime = trialEnd - now;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return Math.max(0, diffDays);
-  };
 
   const trialDaysRemaining = getTrialDaysRemaining();
   const showTrialWarning = trialDaysRemaining <= 5 && trialDaysRemaining > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header con gradiente azul */}
+      {/* Header Responsive */}
       <header className="bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-500 text-white shadow-xl sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center justify-between">
-            {/* Logo y nombre del negocio */}
-            <div className="flex items-center space-x-3">
-              <div className="text-3xl">♥</div>
+            {/* Logo y nombre */}
+            <div className="flex items-center space-x-2 md:space-x-3">
+              <div className="text-2xl md:text-3xl">♥</div>
               <div>
-                <h1 className="text-xl font-bold">{currentUser?.businessName || 'Mi Negocio'}</h1>
-                <p className="text-xs opacity-90">Sistema de Ventas</p>
+                <h1 className="text-base md:text-xl font-bold truncate max-w-[150px] sm:max-w-none">
+                  {currentUser?.businessName || 'Mi Negocio'}
+                </h1>
+                <p className="text-xs opacity-90 hidden sm:block">Sistema de Ventas</p>
               </div>
             </div>
 
-            {/* Menú de usuario */}
-            <div className="flex items-center gap-4">
-              {/* Trial warning */}
+            {/* Botones de navegación - Desktop */}
+            <div className="hidden lg:flex items-center gap-3">
               {showTrialWarning && (
-                <div className="hidden md:block bg-yellow-500 bg-opacity-20 px-3 py-1 rounded-lg text-xs">
-                  {trialDaysRemaining} días restantes de prueba
+                <div className="bg-yellow-500 bg-opacity-20 px-3 py-1 rounded-lg text-xs">
+                  {trialDaysRemaining} días restantes
                 </div>
               )}
 
-              {/* Botón de inicio */}
               <button
                 onClick={() => navigate('dashboard')}
-                className="text-sm bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105"
+                className="text-sm bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-all"
               >
                 Inicio
               </button>
 
-              {/* Menú desplegable de usuario */}
+              {/* Menú de usuario */}
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-2 rounded-lg transition-all duration-300"
+                  className="flex items-center gap-2 bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-2 rounded-lg transition-all"
                 >
                   <User className="w-5 h-5" />
-                  <span className="hidden md:inline text-sm">{currentUser?.email}</span>
+                  <span className="text-sm max-w-[120px] truncate">{currentUser?.email}</span>
                 </button>
 
-                {/* Dropdown menu */}
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 z-50 animate-fade-in">
                     <div className="px-4 py-3 border-b border-gray-200">
-                      <p className="text-sm font-medium text-gray-900">{currentUser?.businessName}</p>
-                      <p className="text-xs text-gray-600">{currentUser?.email}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {currentUser?.businessName}
+                      </p>
+                      <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
                       {trialDaysRemaining > 0 && (
                         <p className="text-xs text-blue-600 mt-1">
                           Trial: {trialDaysRemaining} días restantes
                         </p>
                       )}
                     </div>
-                    
+
                     <button
                       onClick={handleLogout}
                       className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
@@ -282,32 +262,110 @@ function App() {
                 )}
               </div>
             </div>
+
+            {/* Menú hamburguesa - Mobile & Tablet */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="lg:hidden p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-all"
+            >
+              {showMobileMenu ? (
+                <CloseIcon className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
           </div>
+
+          {/* Trial warning móvil */}
+          {showTrialWarning && (
+            <div className="lg:hidden mt-2 bg-yellow-500 bg-opacity-20 px-3 py-2 rounded-lg text-center text-xs">
+              {trialDaysRemaining} días restantes de prueba
+            </div>
+          )}
         </div>
 
-        {/* Trial warning móvil */}
-        {showTrialWarning && (
-          <div className="md:hidden bg-yellow-500 bg-opacity-20 px-4 py-2 text-center text-xs">
-            {trialDaysRemaining} días restantes de periodo de prueba
+        {/* Menú móvil desplegable */}
+        {showMobileMenu && (
+          <div className="lg:hidden bg-blue-700 border-t border-blue-500 animate-slide-down">
+            <div className="container mx-auto px-4 py-4 space-y-2">
+              <button
+                onClick={() => navigate('dashboard')}
+                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+              >
+                🏠 Inicio
+              </button>
+
+              <button
+                onClick={() => navigate('products')}
+                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+              >
+                📦 Productos
+              </button>
+
+              <button
+                onClick={() => navigate('newOrder')}
+                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+              >
+                ➕ Nuevo Pedido
+              </button>
+
+              <button
+                onClick={() => navigate('orders')}
+                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+              >
+                📋 Pedidos del Día
+              </button>
+
+              <button
+                onClick={() => navigate('report')}
+                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+              >
+                📊 Reportes
+              </button>
+
+              <div className="border-t border-blue-500 pt-2 mt-2">
+                <div className="px-4 py-2 text-xs text-blue-100">
+                  <p className="font-medium truncate">{currentUser?.email}</p>
+                  {trialDaysRemaining > 0 && (
+                    <p className="mt-1">Trial: {trialDaysRemaining} días</p>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-3 bg-red-500 bg-opacity-80 hover:bg-opacity-100 rounded-lg transition-all text-sm font-medium flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Cerrar Sesión
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </header>
 
-      {/* Cerrar menú al hacer click fuera */}
-      {showUserMenu && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setShowUserMenu(false)}
+      {/* Overlay para cerrar menús */}
+      {(showUserMenu || showMobileMenu) && (
+        <div
+          className="fixed inset-0 z-40 bg-black bg-opacity-20"
+          onClick={() => {
+            setShowUserMenu(false);
+            setShowMobileMenu(false);
+          }}
         />
       )}
 
-      <main className="container mx-auto px-4 py-6">
+      {/* Contenido principal */}
+      <main className="container mx-auto px-2 sm:px-4 py-4 md:py-6 max-w-7xl">
         {renderView()}
       </main>
 
+      {/* Footer Responsive */}
       <footer className="bg-white border-t border-blue-100 mt-8 py-4 shadow-sm">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-600">
-          <p className="font-medium">Sistema de Ventas - {currentUser?.businessName}</p>
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-xs md:text-sm font-medium text-gray-600">
+            Sistema de Ventas - {currentUser?.businessName}
+          </p>
           <p className="text-xs mt-1 text-gray-500">
             {new Date().toLocaleDateString('es-SV', {
               weekday: 'long',
@@ -319,7 +377,7 @@ function App() {
         </div>
       </footer>
 
-      {/* CSS para animaciones */}
+      {/* Estilos de animaciones */}
       <style>{`
         @keyframes fade-in {
           from {
@@ -332,8 +390,30 @@ function App() {
           }
         }
 
+        @keyframes slide-down {
+          from {
+            max-height: 0;
+            opacity: 0;
+          }
+          to {
+            max-height: 500px;
+            opacity: 1;
+          }
+        }
+
         .animate-fade-in {
           animation: fade-in 0.2s ease-out;
+        }
+
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
+        }
+
+        /* Mejoras de scroll en móviles */
+        @media (max-width: 768px) {
+          body {
+            -webkit-overflow-scrolling: touch;
+          }
         }
       `}</style>
     </div>

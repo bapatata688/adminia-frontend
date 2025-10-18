@@ -1,107 +1,112 @@
 /**
  * ============================================
- * API SERVICE - Comunicación con Backend
+ * API SERVICE - CORREGIDO
  * ============================================
- * Archivo: src/services/api.js
- * Propósito: Centralizar todas las llamadas HTTP al backend
- * 
- * CORREGIDO: Incluye interceptor para agregar token automáticamente
+ * FIX: Mejor manejo de errores y logging
  */
 
 import axios from 'axios';
 
-// Configurar URL base según ambiente
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-console.log('API URL configurada:', API_URL);
+console.log('🔗 API URL configurada:', API_URL);
 
-// Crear instancia de axios
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 30000 // 30 segundos timeout
 });
 
 // ============================================
-// INTERCEPTOR: Agregar token a todas las peticiones
+// INTERCEPTOR REQUEST
 // ============================================
 api.interceptors.request.use(
   (config) => {
-    // Obtener token de localStorage
     const token = localStorage.getItem('accessToken');
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('Token agregado a request:', config.url);
+      console.log(`📤 ${config.method.toUpperCase()} ${config.url}`);
     } else {
-      console.warn('No hay token disponible para:', config.url);
+      console.warn('⚠️ No hay token para:', config.url);
     }
 
     return config;
   },
   (error) => {
+    console.error('❌ Error en request interceptor:', error);
     return Promise.reject(error);
   }
 );
 
 // ============================================
-// INTERCEPTOR: Manejar respuestas y errores
+// INTERCEPTOR RESPONSE
 // ============================================
 api.interceptors.response.use(
   (response) => {
+    console.log(`✅ ${response.config.method.toUpperCase()} ${response.config.url} - ${response.status}`);
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
 
-    // Si es error 401 y no es un retry
+    // Log del error
+    if (error.response) {
+      console.error(`❌ ${error.response.status} ${originalRequest.url}:`, error.response.data);
+    } else if (error.request) {
+      console.error('❌ No response from server:', originalRequest.url);
+    } else {
+      console.error('❌ Request setup error:', error.message);
+    }
+
+    // Manejo de 401 - Token expirado
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      // Intentar refrescar token
       const refreshToken = localStorage.getItem('refreshToken');
 
       if (refreshToken) {
         try {
-          console.log('Intentando refrescar token...');
+          console.log('🔄 Intentando refrescar token...');
 
           const response = await axios.post(`${API_URL}/auth/refresh`, {
             refreshToken
           });
 
           const { accessToken } = response.data;
-
-          // Guardar nuevo token
           localStorage.setItem('accessToken', accessToken);
 
-          // Reintentar request original con nuevo token
+          console.log('✅ Token refrescado exitosamente');
+
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return api(originalRequest);
 
         } catch (refreshError) {
-          console.error('Error refrescando token:', refreshError);
+          console.error('❌ Error refrescando token:', refreshError);
 
-          // Limpiar localStorage y redirigir a login
+          // Limpiar y redirigir
           localStorage.clear();
           window.location.href = '/';
 
           return Promise.reject(refreshError);
         }
       } else {
-        console.warn('No hay refresh token, redirigiendo a login');
+        console.warn('⚠️ No hay refresh token disponible');
         localStorage.clear();
         window.location.href = '/';
       }
     }
 
-    // Manejar otros errores
-    const errorMessage = error.response?.data?.error ||
+    // Construir mensaje de error legible
+    const errorMessage =
+      error.response?.data?.error ||
       error.response?.data?.message ||
       error.message ||
-      'Error en la petición';
+      'Error en la petición al servidor';
 
-    console.error('API Error:', errorMessage);
+    console.error('❌ Error final:', errorMessage);
 
     return Promise.reject(new Error(errorMessage));
   }
@@ -111,66 +116,120 @@ api.interceptors.response.use(
 // PRODUCTS API
 // ============================================
 export const productsAPI = {
-  getAll: () => api.get('/products'),
+  getAll: () => {
+    console.log('📦 Obteniendo productos...');
+    return api.get('/products');
+  },
 
-  getById: (id) => api.get(`/products/${id}`),
+  getById: (id) => {
+    console.log(`📦 Obteniendo producto ${id}...`);
+    return api.get(`/products/${id}`);
+  },
 
-  create: (data) => api.post('/products', data),
+  create: (data) => {
+    console.log('📦 Creando producto:', data);
+    return api.post('/products', data);
+  },
 
-  update: (id, data) => api.put(`/products/${id}`, data),
+  update: (id, data) => {
+    console.log(`📦 Actualizando producto ${id}:`, data);
+    return api.put(`/products/${id}`, data);
+  },
 
-  delete: (id) => api.delete(`/products/${id}`)
+  delete: (id) => {
+    console.log(`📦 Eliminando producto ${id}...`);
+    return api.delete(`/products/${id}`);
+  }
 };
 
 // ============================================
 // ORDERS API
 // ============================================
 export const ordersAPI = {
-  getByDate: (date) => api.get('/orders', { params: { date } }),
+  getByDate: (date) => {
+    console.log(`📝 Obteniendo órdenes del ${date}...`);
+    return api.get('/orders', { params: { date } });
+  },
 
-  getById: (id) => api.get(`/orders/${id}`),
+  getById: (id) => {
+    console.log(`📝 Obteniendo orden ${id}...`);
+    return api.get(`/orders/${id}`);
+  },
 
-  create: (data) => api.post('/orders', data),
+  create: (data) => {
+    console.log('📝 Creando orden:', data);
+    return api.post('/orders', data);
+  },
 
-  update: (id, data) => api.put(`/orders/${id}`, data),
+  update: (id, data) => {
+    console.log(`📝 Actualizando orden ${id}:`, data);
+    return api.put(`/orders/${id}`, data);
+  },
 
-  delete: (id) => api.delete(`/orders/${id}`)
+  delete: (id) => {
+    console.log(`📝 Eliminando orden ${id}...`);
+    return api.delete(`/orders/${id}`);
+  }
 };
 
 // ============================================
 // REPORTS API
 // ============================================
 export const reportsAPI = {
-  getDaily: (date) => api.get(`/reports/daily/${date}`),
+  getDaily: (date) => {
+    console.log(`📊 Obteniendo reporte del ${date}...`);
+    return api.get(`/reports/daily/${date}`);
+  },
 
-  exportCSV: (date) => api.get(`/reports/daily/${date}/export`, {
-    responseType: 'blob'
-  }),
+  exportCSV: (date) => {
+    console.log(`📊 Exportando CSV del ${date}...`);
+    return api.get(`/reports/daily/${date}/export`, {
+      responseType: 'blob'
+    });
+  },
 
-  getSummary: (startDate, endDate) => api.get('/reports/summary', {
-    params: { start_date: startDate, end_date: endDate }
-  })
+  getSummary: (startDate, endDate) => {
+    console.log(`📊 Obteniendo resumen ${startDate} a ${endDate}...`);
+    return api.get('/reports/summary', {
+      params: { start_date: startDate, end_date: endDate }
+    });
+  }
 };
 
 // ============================================
 // OPEN DAYS API
 // ============================================
 export const openDaysAPI = {
-  getAll: (startDate, endDate) => api.get('/open-days', {
-    params: { start_date: startDate, end_date: endDate }
-  }),
+  getAll: (startDate, endDate) => {
+    console.log(`📅 Obteniendo días abiertos ${startDate} a ${endDate}...`);
+    return api.get('/open-days', {
+      params: { start_date: startDate, end_date: endDate }
+    });
+  },
 
-  getByDate: (date) => api.get(`/open-days/${date}`),
+  getByDate: (date) => {
+    console.log(`📅 Obteniendo día ${date}...`);
+    return api.get(`/open-days/${date}`);
+  },
 
-  update: (date, isOpen) => api.put(`/open-days/${date}`, { is_open: isOpen }),
+  update: (date, isOpen) => {
+    console.log(`📅 Actualizando día ${date}: ${isOpen ? 'abierto' : 'cerrado'}`);
+    return api.put(`/open-days/${date}`, { is_open: isOpen });
+  },
 
-  createMultiple: (dates) => api.post('/open-days', { dates }),
+  createMultiple: (dates) => {
+    console.log(`📅 Creando múltiples días:`, dates);
+    return api.post('/open-days', { dates });
+  },
 
-  delete: (date) => api.delete(`/open-days/${date}`)
+  delete: (date) => {
+    console.log(`📅 Eliminando día ${date}...`);
+    return api.delete(`/open-days/${date}`);
+  }
 };
 
 // ============================================
-// EXPORT DEFAULT
+// EXPORT
 // ============================================
 const apiServices = {
   productsAPI,
