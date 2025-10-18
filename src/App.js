@@ -30,12 +30,12 @@ import Products from './components/Products';
 import DailyReport from './components/DailyReport';
 import OpenDays from './components/OpenDays';
 
-import { 
-  isAuthenticated, 
-  logout, 
+import {
+  isAuthenticated,
+  logout,
   getUserFromStorage,
   getTrialDaysRemaining,
-  setupAxiosInterceptors 
+  setupAxiosInterceptors
 } from './services/auth';
 
 function App() {
@@ -81,7 +81,7 @@ function App() {
       report: 'Reporte Diario',
       openDays: 'Días Abiertos'
     };
-    
+
     const businessName = currentUser?.businessName || 'Negocios de mi linda';
     document.title = `${titles[currentView]} - ${businessName}`;
   }, [currentView, currentUser]);
@@ -236,7 +236,7 @@ function App() {
                         </p>
                       )}
                     </div>
-                    
+
                     <button
                       onClick={handleLogout}
                       className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
@@ -261,8 +261,8 @@ function App() {
 
       {/* Cerrar menú al hacer click fuera */}
       {showUserMenu && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setShowUserMenu(false)}
         />
       )}

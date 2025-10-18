@@ -1,59 +1,12 @@
-import axios from 'axios';
-/**
- * Solicitar reset de contraseña
- */
-export const forgotPassword = async (email) => {
-  try {
-    const response = await axios.post(AUTH_ENDPOINTS.FORGOT_PASSWORD, { email });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Resetear contraseña con token
- */
-export const resetPassword = async (token, newPassword) => {
-  try {
-    const response = await axios.post(AUTH_ENDPOINTS.RESET_PASSWORD, {
-      token,
-      newPassword
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Verificar si el usuario está autenticado
- */
-export const isAuthenticated = () => {
-  return TokenManager.hasValidSession();
-};
-
-/**
- * Obtener información del usuario desde localStorage
- */
-export const getUserFromStorage = () => {
-  return TokenManager.getUser();
-};
-
 /**
  * ============================================
  * SERVICIO DE AUTENTICACIÓN - Frontend
  * ============================================
- * Archivo: services/auth.js
+ * Archivo: src/services/auth.js
  * Propósito: Manejo de autenticación y tokens en el cliente
- * 
- * Funciones principales:
- * - login: Iniciar sesión
- * - register: Registrar nuevo usuario
- * - logout: Cerrar sesión
- * - refreshToken, rememberToken, user
  */
 
+import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -132,7 +85,6 @@ export const TokenManager = {
  * Configurar interceptor de axios para incluir token automáticamente
  */
 export const setupAxiosInterceptors = (onUnauthorized) => {
-  // Request interceptor: Agregar token a todas las peticiones
   axios.interceptors.request.use(
     (config) => {
       const token = TokenManager.getAccessToken();
@@ -146,17 +98,14 @@ export const setupAxiosInterceptors = (onUnauthorized) => {
     }
   );
 
-  // Response interceptor: Manejar errores de autenticación
   axios.interceptors.response.use(
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
 
-      // Si el error es 401 y no es una retry
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
-        // Intentar refrescar el token
         const refreshToken = TokenManager.getRefreshToken();
 
         if (refreshToken) {
@@ -166,11 +115,9 @@ export const setupAxiosInterceptors = (onUnauthorized) => {
 
             TokenManager.setAccessToken(accessToken);
 
-            // Reintentar la petición original con el nuevo token
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             return axios(originalRequest);
           } catch (refreshError) {
-            // Si falla el refresh, cerrar sesión
             TokenManager.clearAll();
             if (onUnauthorized) {
               onUnauthorized();
@@ -178,7 +125,6 @@ export const setupAxiosInterceptors = (onUnauthorized) => {
             return Promise.reject(refreshError);
           }
         } else {
-          // No hay refresh token, cerrar sesión
           TokenManager.clearAll();
           if (onUnauthorized) {
             onUnauthorized();
@@ -204,7 +150,6 @@ export const login = async (email, password, rememberMe = false) => {
 
     const { user, tokens } = response.data;
 
-    // Guardar tokens y usuario
     TokenManager.setAccessToken(tokens.accessToken);
     TokenManager.setRefreshToken(tokens.refreshToken);
 
@@ -234,7 +179,6 @@ export const register = async (email, password, businessName, rememberMe = false
 
     const { user, tokens } = response.data;
 
-    // Guardar tokens y usuario
     TokenManager.setAccessToken(tokens.accessToken);
     TokenManager.setRefreshToken(tokens.refreshToken);
 
@@ -263,7 +207,6 @@ export const logout = async () => {
   } catch (error) {
     console.error('Error en logout:', error);
   } finally {
-    // Siempre limpiar el localStorage
     TokenManager.clearAll();
   }
 };
@@ -292,7 +235,7 @@ export const refreshAccessToken = async () => {
 };
 
 /**
- * Login con remember token (sesión persistente)
+ * Login con remember token
  */
 export const loginWithRemember = async (rememberToken) => {
   try {
@@ -302,7 +245,6 @@ export const loginWithRemember = async (rememberToken) => {
 
     const { user, tokens } = response.data;
 
-    // Guardar tokens y usuario
     TokenManager.setAccessToken(tokens.accessToken);
     TokenManager.setRefreshToken(tokens.refreshToken);
     TokenManager.setRememberToken(tokens.rememberToken);
@@ -310,7 +252,6 @@ export const loginWithRemember = async (rememberToken) => {
 
     return response.data;
   } catch (error) {
-    // Si falla, limpiar remember token inválido
     TokenManager.setRememberToken(null);
     throw error;
   }
@@ -321,14 +262,12 @@ export const loginWithRemember = async (rememberToken) => {
  */
 export const getCurrentUser = async () => {
   try {
-    // Primero intentar desde localStorage
     const cachedUser = TokenManager.getUser();
 
     if (cachedUser) {
       return cachedUser;
     }
 
-    // Si no hay caché, hacer petición al servidor
     const response = await axios.get(AUTH_ENDPOINTS.ME);
     const { user } = response.data;
 
@@ -340,6 +279,9 @@ export const getCurrentUser = async () => {
   }
 };
 
+/**
+ * Actualizar perfil del usuario
+ */
 export const updateProfile = async (updates) => {
   try {
     const response = await axios.put(AUTH_ENDPOINTS.UPDATE_PROFILE, updates);
@@ -352,3 +294,98 @@ export const updateProfile = async (updates) => {
     throw error;
   }
 };
+
+/**
+ * Solicitar reset de contraseña
+ */
+export const forgotPassword = async (email) => {
+  try {
+    const response = await axios.post(AUTH_ENDPOINTS.FORGOT_PASSWORD, { email });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Resetear contraseña con token
+ */
+export const resetPassword = async (token, newPassword) => {
+  try {
+    const response = await axios.post(AUTH_ENDPOINTS.RESET_PASSWORD, {
+      token,
+      newPassword
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Verificar si el usuario está autenticado
+ */
+export const isAuthenticated = () => {
+  return TokenManager.hasValidSession();
+};
+
+/**
+ * Obtener información del usuario desde localStorage
+ */
+export const getUserFromStorage = () => {
+  return TokenManager.getUser();
+};
+
+/**
+ * Verificar si el trial ha expirado
+ */
+export const isTrialExpired = () => {
+  const user = TokenManager.getUser();
+
+  if (!user || !user.trialEndsAt) {
+    return false;
+  }
+
+  const trialEnd = new Date(user.trialEndsAt);
+  const now = new Date();
+
+  return now > trialEnd;
+};
+
+/**
+ * Obtener días restantes de trial
+ */
+export const getTrialDaysRemaining = () => {
+  const user = TokenManager.getUser();
+
+  if (!user || !user.trialEndsAt) {
+    return 0;
+  }
+
+  const trialEnd = new Date(user.trialEndsAt);
+  const now = new Date();
+  const diffTime = trialEnd - now;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  return Math.max(0, diffDays);
+};
+
+const authService = {
+  login,
+  register,
+  logout,
+  refreshAccessToken,
+  loginWithRemember,
+  getCurrentUser,
+  updateProfile,
+  forgotPassword,
+  resetPassword,
+  isAuthenticated,
+  getUserFromStorage,
+  isTrialExpired,
+  getTrialDaysRemaining,
+  TokenManager,
+  setupAxiosInterceptors
+};
+
+export default authService;
