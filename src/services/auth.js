@@ -1,3 +1,4 @@
+import axios from 'axios';
 /**
  * Solicitar reset de contraseña
  */
@@ -53,7 +54,6 @@ export const getUserFromStorage = () => {
  * - refreshToken, rememberToken, user
  */
 
-import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
