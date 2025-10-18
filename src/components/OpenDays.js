@@ -34,7 +34,7 @@ function OpenDays({ onNavigate }) {
       const endDate = new Date().toISOString().split('T')[0];
       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const response = await openDaysAPI.getAll(startDate, endDate);
-      setDays(response.data || []);
+      setDays(response.data.data || []);
     } catch (err) {
       console.error(err);
     } finally {

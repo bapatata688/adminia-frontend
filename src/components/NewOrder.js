@@ -17,7 +17,7 @@
  */
 
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { productsAPI, ordersAPI } from '../services/api';
 import { Plus, X, Trash2, ShoppingCart, Package } from 'lucide-react';
 
@@ -43,16 +43,17 @@ function NewOrder({ onNavigate, editingOrder, selectedDate }) {
     }
   }, [editingOrder]);
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       const response = await productsAPI.getAll();
-      setProducts(response.data || []);
+      console.log(response.data);
+      setProducts(response.data.data || []);
     } catch (err) {
       setError('Error cargando productos: ' + err.message);
     }
-  };
+  }, []);
 
-  const loadOrderForEdit = async () => {
+  const loadOrderForEdit = useCallback(async () => {
     try {
       const response = await ordersAPI.getById(editingOrder.id);
       const order = response.data;
@@ -68,7 +69,7 @@ function NewOrder({ onNavigate, editingOrder, selectedDate }) {
     } catch (err) {
       setError('Error cargando pedido: ' + err.message);
     }
-  };
+  }, [editingOrder]);
 
   const calculateItemSubtotal = (item) => {
     const product = products.find(p => p.id === parseInt(item.product_id));

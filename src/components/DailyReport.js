@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { reportsAPI } from '../services/api';
 import {
   ShoppingBag,
@@ -32,7 +32,7 @@ function DailyReport({ onNavigate, selectedDate, onDateChange }) {
     loadReport();
   }, [selectedDate]);
 
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -44,7 +44,7 @@ function DailyReport({ onNavigate, selectedDate, onDateChange }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleExport = async () => {
     try {

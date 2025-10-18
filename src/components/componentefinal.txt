@@ -1,0 +1,1909 @@
+/**
+ * ============================================
+ * REPORTE DIARIO - Exportación y Análisis
+ * ============================================
+ * Migrado a iconos de lucide-react
+ */
+
+import React from 'react';
+import { useState, useEffect } from 'react';
+import { reportsAPI } from '../services/api';
+import {
+  ShoppingBag,
+  DollarSign,
+  Truck,
+  Bike,
+  Download,
+  BarChart3,
+  TrendingUp,
+  Package,
+  Trophy,
+  Medal,
+  Award
+} from 'lucide-react';
+
+function DailyReport({ onNavigate, selectedDate, onDateChange }) {
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadReport();
+  }, [selectedDate]);
+
+  const loadReport = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await reportsAPI.getDaily(selectedDate);
+      setReport(response.data);
+    } catch (err) {
+      setError(err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await reportsAPI.exportCSV(selectedDate);
+      alert('CSV exportado exitosamente');
+    } catch (err) {
+      alert('Error exportando CSV: ' + err.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">Reporte de tus Ingresos mi amor</h2>
+          <button
+            onClick={() => onNavigate('dashboard')}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            ← Volver
+          </button>
+        </div>
+      </div>
+
+      {/* Selector de Fecha */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Selecciona una fecha para ver los reportes amor
+        </label>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => onDateChange(e.target.value)}
+          className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+        />
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl animate-slideDown">
+          {error}
+        </div>
+      )}
+
+      {/* Resumen - Cards de Métricas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Pedidos */}
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl animate-fadeIn">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium opacity-90">Pedidos</p>
+            <ShoppingBag className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">{report?.totals.orders || 0}</p>
+          <div className="mt-2 h-1 bg-white bg-opacity-20 rounded-full overflow-hidden">
+            <div className="h-full bg-white bg-opacity-40 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+          </div>
+        </div>
+
+        {/* Ventas */}
+        <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl animate-fadeIn" style={{ animationDelay: '0.1s' }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium opacity-90">Ventas</p>
+            <DollarSign className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">${(report?.totals.sales || 0).toFixed(2)}</p>
+          <div className="mt-2 flex items-center text-xs opacity-80">
+            <TrendingUp className="w-4 h-4 mr-1" />
+            Total del día
+          </div>
+        </div>
+
+        {/* Entregas */}
+        <div className="bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl animate-fadeIn" style={{ animationDelay: '0.2s' }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium opacity-90">Entregas</p>
+            <Truck className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">{report?.totals.delivery_orders || 0}</p>
+          <div className="mt-2 text-xs opacity-80">
+            {report?.totals.orders > 0 && (
+              <span>
+                {Math.round((report.totals.delivery_orders / report.totals.orders) * 100)}% del total
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Costo de Envíos */}
+        <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl animate-fadeIn" style={{ animationDelay: '0.3s' }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium opacity-90">Costo Envíos</p>
+            <Bike className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">${(report?.totals.delivery || 0).toFixed(2)}</p>
+          <div className="mt-2 text-xs opacity-80">
+            Ingresos adicionales
+          </div>
+        </div>
+      </div>
+
+      {/* Botón Exportar */}
+      <button
+        onClick={handleExport}
+        disabled={exporting || !report?.totals.orders}
+        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] hover:shadow-xl flex items-center justify-center space-x-2 group"
+      >
+        <Download className="w-5 h-5 group-hover:animate-bounce" />
+        <span>{exporting ? 'Exportando...' : 'Exportar a CSV'}</span>
+        {exporting && (
+          <svg className="animate-spin h-5 w-5 ml-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+      </button>
+
+      {/* Productos Vendidos - Tabla Detallada */}
+      {report?.products && report.products.length > 0 ? (
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-blue-100 animate-slideUp">
+          <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-sky-50 border-b border-blue-100">
+            <h3 className="font-bold text-lg text-blue-900 flex items-center">
+              <BarChart3 className="w-5 h-5 mr-2" />
+              Detalle de Ventas por Producto
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-blue-100">
+              <thead className="bg-blue-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-blue-900 uppercase tracking-wider">
+                    Producto
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-blue-900 uppercase tracking-wider">
+                    Masa
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-blue-900 uppercase tracking-wider">
+                    Cantidad
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-blue-900 uppercase tracking-wider">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-blue-50 bg-white">
+                {report.products.map((product, idx) => (
+                  <tr
+                    key={idx}
+                    className="hover:bg-blue-50 transition-colors duration-200 animate-fadeIn"
+                    style={{ animationDelay: `${idx * 0.05}s` }}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium text-gray-900">{product.name}</span>
+                        {product.is_small && (
+                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-sm animate-pulse">
+                            3x1$
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-700 capitalize font-medium">{product.masa}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold text-blue-700 bg-blue-100">
+                        {product.quantity}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <span className="text-sm font-bold text-teal-600">
+                        ${product.total.toFixed(2)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-gradient-to-r from-blue-50 to-sky-50">
+                <tr>
+                  <td colSpan="3" className="px-6 py-4 text-right text-sm font-bold text-blue-900">
+                    TOTAL GENERAL:
+                  </td>
+                  <td className="px-6 py-4 text-right text-lg font-bold text-blue-700">
+                    ${(report?.totals.sales || 0).toFixed(2)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-br from-blue-50 to-sky-50 rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-blue-200 animate-fadeIn">
+          <Package className="w-16 h-16 mx-auto mb-4 text-gray-400 animate-bounce" />
+          <h3 className="text-xl font-bold text-blue-900 mb-2">No hay datos para este día amor, chambeaste?</h3>
+          <p className="text-blue-600">Selecciona una fecha diferente o crea pedidos para ver los reportes mi linda</p>
+        </div>
+      )}
+
+      {/* Top 5 Productos */}
+      {report?.top_products && report.top_products.length > 0 && (
+        <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-lg p-6 border border-blue-100 animate-slideUp" style={{ animationDelay: '0.2s' }}>
+          <h3 className="font-bold text-xl mb-6 text-blue-900 flex items-center">
+            <Trophy className="w-6 h-6 mr-2" />
+            Top 5 Productos Más Vendidos
+          </h3>
+          <div className="space-y-4">
+            {report.top_products.map((product, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border border-blue-100 hover:border-blue-300 transform hover:scale-[1.02] animate-fadeIn"
+                style={{ animationDelay: `${idx * 0.1}s` }}
+              >
+                <div className="flex items-center space-x-4">
+                  <div className={`
+                    flex items-center justify-center w-12 h-12 rounded-full font-bold text-xl
+                    ${idx === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-white shadow-lg' :
+                      idx === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white shadow-md' :
+                        idx === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-md' :
+                          'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700'}
+                  `}>
+                    {idx === 0 ? <Trophy className="w-6 h-6" /> :
+                      idx === 1 ? <Medal className="w-6 h-6" /> :
+                        idx === 2 ? <Award className="w-6 h-6" /> :
+                          idx + 1}
+                  </div>
+                  <span className="font-semibold text-gray-800 text-lg">{product.name}</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-blue-700 text-lg">{product.quantity} uds</div>
+                  <div className="text-sm text-teal-600 font-semibold">${product.total.toFixed(2)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Estilos CSS para animaciones */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-out forwards;
+          opacity: 0;
+        }
+
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out forwards;
+        }
+
+        .animate-slideUp {
+          animation: slideUp 0.6s ease-out forwards;
+          opacity: 0;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default DailyReport;
+/**
+ * ============================================
+ * DASHBOARD - Vista Principal
+ * ============================================
+ * Diseño mejorado con:
+ * - Iconos de lucide-react
+ * - Gradientes azules y tonos complementarios
+ * - Animaciones suaves de entrada
+ * - Cards con efectos hover
+ * - Bordes y sombras sutiles
+ */
+
+/**
+ * ============================================
+ * DASHBOARD - Vista Principal
+ * ============================================
+ * CORREGIDO: Maneja correctamente la estructura de respuesta del backend
+ */
+
+import { useState, useEffect, useCallback } from 'react';
+import { reportsAPI } from '../services/api';
+import {
+  DollarSign,
+  ShoppingBag,
+  Truck,
+  Plus,
+  ClipboardList,
+  Cookie,
+  BarChart3,
+  Calendar,
+  RefreshCw,
+  Package
+} from 'lucide-react';
+
+function Dashboard({ onNavigate, selectedDate }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [summary, setSummary] = useState({
+    totalSales: 0,
+    orderCount: 0,
+    deliveryCount: 0,
+    products: []
+  });
+
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('Cargando reporte para fecha:', selectedDate);
+
+      // Obtener reporte del día
+      const response = await reportsAPI.getDaily(selectedDate);
+
+      console.log('Respuesta completa del backend:', response);
+
+      // La respuesta de axios viene en response.data
+      // Y tu backend devuelve { success: true, data: { ... } }
+      const reportData = response.data;
+
+      console.log('Datos del reporte:', reportData);
+
+      // Verificar estructura
+      if (!reportData || !reportData.data || !reportData.data.totals) {
+        console.error('Estructura de respuesta inválida:', reportData);
+        throw new Error('Estructura de respuesta inválida del servidor');
+      }
+
+      setSummary({
+        totalSales: reportData.data.totals.sales || 0,
+        orderCount: reportData.data.totals.orders || 0,
+        deliveryCount: reportData.data.totals.delivery_orders || 0,
+        products: reportData.data.products || []
+      });
+
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || err.message || 'Error desconocido';
+      setError(errorMessage);
+      console.error('Error cargando dashboard:', err);
+      console.error('Detalles del error:', err.response);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedDate]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      {/* Título y Fecha */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-6 transform transition-all duration-300 hover:shadow-md">
+        <h2 className="text-2xl font-bold text-gray-800">Dashboard de mi linda</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-SV', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}
+        </p>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl animate-slideDown">
+          <p className="font-semibold">Error</p>
+          <p className="text-sm">{error}</p>
+          <button
+            onClick={loadDashboardData}
+            className="mt-2 text-sm underline hover:no-underline"
+          >
+            Intentar de nuevo
+          </button>
+        </div>
+      )}
+
+      {/* Tarjetas de Resumen */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Total de Ventas */}
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm opacity-90 font-medium">Total de Ventas</p>
+              <p className="text-3xl font-bold mt-2">
+                ${summary.totalSales.toFixed(2)}
+              </p>
+            </div>
+            <DollarSign className="w-12 h-12 opacity-80" />
+          </div>
+        </div>
+
+        {/* Número de Pedidos */}
+        <div className="bg-gradient-to-br from-blue-500 to-cyan-600 text-white rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm opacity-90 font-medium">Pedidos</p>
+              <p className="text-3xl font-bold mt-2">{summary.orderCount}</p>
+            </div>
+            <ShoppingBag className="w-12 h-12 opacity-80" />
+          </div>
+        </div>
+
+        {/* Entregas */}
+        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm opacity-90 font-medium">Entregas</p>
+              <p className="text-3xl font-bold mt-2">{summary.deliveryCount}</p>
+            </div>
+            <Truck className="w-12 h-12 opacity-80" />
+          </div>
+        </div>
+      </div>
+
+      {/* Botones de Acción */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <button
+          onClick={() => onNavigate('newOrder')}
+          className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+        >
+          <Plus className="w-6 h-6 mx-auto mb-1" />
+          <div>Nuevo Pedido</div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('orders')}
+          className="bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+        >
+          <ClipboardList className="w-6 h-6 mx-auto mb-1" />
+          <div>Ver Pedidos</div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('products')}
+          className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+        >
+          <Cookie className="w-6 h-6 mx-auto mb-1" />
+          <div>Productos</div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('report')}
+          className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+        >
+          <BarChart3 className="w-6 h-6 mx-auto mb-1" />
+          <div>Reporte</div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('openDays')}
+          className="bg-gradient-to-r from-violet-500 to-indigo-500 hover:from-violet-600 hover:to-indigo-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+        >
+          <Calendar className="w-6 h-6 mx-auto mb-1" />
+          <div>Días Abiertos</div>
+        </button>
+
+        <button
+          onClick={loadDashboardData}
+          className="bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+        >
+          <RefreshCw className="w-6 h-6 mx-auto mb-1" />
+          <div>Actualizar</div>
+        </button>
+      </div>
+
+      {/* Resumen por Producto */}
+      {summary.products.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-blue-50 overflow-hidden animate-slideUp">
+          <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-blue-100">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <Package className="w-5 h-5 mr-2" />
+              Ventas por Producto
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Producto
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Masa
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cantidad
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {summary.products.map((product, index) => (
+                  <tr key={index} className="hover:bg-blue-50 transition-colors duration-150">
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {product.name}
+                      {product.is_small && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                          3x1$
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 capitalize">
+                      {product.masa}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 text-right font-medium">
+                      {product.quantity}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-blue-600 text-right font-semibold">
+                      ${product.total.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Sin datos */}
+      {summary.orderCount === 0 && !loading && !error && (
+        <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-8 text-center animate-fadeIn">
+          <Package className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            No hay pedidos aún, a chambear mi bonita
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Comienza agregando tu primer pedido del día amor
+          </p>
+          <button
+            onClick={() => onNavigate('newOrder')}
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
+          >
+            Crear Primer Pedido
+          </button>
+        </div>
+      )}
+
+      {/* Animaciones CSS */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideDown {
+          from { transform: translateY(-10px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(10px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
+        .animate-slideDown { animation: slideDown 0.3s ease-out; }
+        .animate-slideUp { animation: slideUp 0.5s ease-out; }
+      `}</style>
+    </div>
+  );
+}
+
+export default Dashboard;
+/**
+ * ============================================
+ * NUEVO PEDIDO - Formulario de Registro
+ * ============================================
+ * Mejoras de diseño:
+ * - Inputs con focus ring azul
+ * - Tabla con hover effects
+ * - Gradientes en botones principales
+ * - Animaciones de entrada
+ */
+
+/**
+ * ============================================
+ * NUEVO PEDIDO - Formulario de Registro
+ * ============================================
+ * Migrado a iconos de lucide-react
+ */
+
+import React from 'react';
+import { useState, useEffect } from 'react';
+import { productsAPI, ordersAPI } from '../services/api';
+import { Plus, X, Trash2, ShoppingCart, Package } from 'lucide-react';
+
+function NewOrder({ onNavigate, editingOrder, selectedDate }) {
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [items, setItems] = useState([]);
+  const [isDelivery, setIsDelivery] = useState(false);
+  const [deliveryCost, setDeliveryCost] = useState('');
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const [newItem, setNewItem] = useState({
+    product_id: '',
+    masa: 'maíz',
+    quantity: 1
+  });
+
+  useEffect(() => {
+    loadProducts();
+    if (editingOrder) {
+      loadOrderForEdit();
+    }
+  }, [editingOrder]);
+
+  const loadProducts = async () => {
+    try {
+      const response = await productsAPI.getAll();
+      setProducts(response.data || []);
+    } catch (err) {
+      setError('Error cargando productos: ' + err.message);
+    }
+  };
+
+  const loadOrderForEdit = async () => {
+    try {
+      const response = await ordersAPI.getById(editingOrder.id);
+      const order = response.data;
+
+      setItems(order.items.map(item => ({
+        product_id: item.product_id,
+        masa: item.masa,
+        quantity: item.quantity
+      })));
+
+      setIsDelivery(order.is_delivery);
+      setDeliveryCost(order.delivery_cost > 0 ? order.delivery_cost.toString() : '');
+    } catch (err) {
+      setError('Error cargando pedido: ' + err.message);
+    }
+  };
+
+  const calculateItemSubtotal = (item) => {
+    const product = products.find(p => p.id === parseInt(item.product_id));
+    if (!product) return 0;
+
+    const quantity = parseInt(item.quantity) || 0;
+    const price = parseFloat(product.price);
+
+    if (product.is_small) {
+      const completeGroups = Math.floor(quantity / 3);
+      const remaining = quantity % 3;
+      return completeGroups * 1.00 + remaining * price;
+    }
+
+    return quantity * price;
+  };
+
+  const calculateTotal = () => {
+    const itemsTotal = items.reduce((sum, item) => sum + calculateItemSubtotal(item), 0);
+    const delivery = isDelivery ? (parseFloat(deliveryCost) || 0) : 0;
+    return itemsTotal + delivery;
+  };
+
+  const addItem = () => {
+    if (!newItem.product_id) {
+      setError('Selecciona un producto');
+      return;
+    }
+
+    if (newItem.quantity <= 0) {
+      setError('La cantidad debe ser mayor a cero');
+      return;
+    }
+
+    setItems([...items, { ...newItem }]);
+    setNewItem({ product_id: '', masa: 'maíz', quantity: 1 });
+    setError(null);
+  };
+
+  const removeItem = (index) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (items.length === 0) {
+      setError('Agrega al menos un producto');
+      return;
+    }
+
+    if (isDelivery && (!deliveryCost || parseFloat(deliveryCost) < 0)) {
+      setError('Ingresa un costo de envío válido');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const orderData = {
+        items,
+        is_delivery: isDelivery,
+        delivery_cost: isDelivery ? parseFloat(deliveryCost) : 0,
+        business_day: selectedDate
+      };
+
+      if (editingOrder) {
+        await ordersAPI.update(editingOrder.id, orderData);
+        setSuccess('Pedido actualizado exitosamente');
+      } else {
+        await ordersAPI.create(orderData);
+        setSuccess('Pedido creado exitosamente');
+      }
+
+      setTimeout(() => onNavigate('orders'), 1000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {editingOrder ? 'Editar Pedido' : 'Nuevo Pedido'}
+          </h2>
+          <button
+            onClick={() => onNavigate('orders')}
+            className="text-gray-500 hover:text-gray-700 transition-colors flex items-center"
+          >
+            <X className="w-5 h-5 mr-1" />
+            Cancelar
+          </button>
+        </div>
+      </div>
+
+      {/* Mensajes */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl animate-slideDown">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl animate-slideDown">
+          {success}
+        </div>
+      )}
+
+      {/* Formulario Agregar Ítem */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+          <Package className="w-5 h-5 mr-2" />
+          Agregar Producto
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Producto
+            </label>
+            <select
+              value={newItem.product_id}
+              onChange={(e) => setNewItem({ ...newItem, product_id: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            >
+              <option value="">Seleccionar...</option>
+              {products.map(product => (
+                <option key={product.id} value={product.id}>
+                  {product.name} - ${parseFloat(product.price).toFixed(2)}
+                  {product.is_small ? ' (3x1$)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Masa
+            </label>
+            <select
+              value={newItem.masa}
+              onChange={(e) => setNewItem({ ...newItem, masa: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            >
+              <option value="maíz">Maíz</option>
+              <option value="arroz">Arroz</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cantidad
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={newItem.quantity}
+              onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={addItem}
+          className="mt-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Agregar
+        </button>
+      </div>
+
+      {/* Lista de Ítems */}
+      {items.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-blue-50 overflow-hidden animate-slideUp">
+          <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-blue-100">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              Productos del Pedido
+            </h3>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Producto
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Masa
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                    Cantidad
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Subtotal
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                    Acción
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {items.map((item, index) => {
+                  const product = products.find(p => p.id === parseInt(item.product_id));
+                  const subtotal = calculateItemSubtotal(item);
+
+                  return (
+                    <tr key={index} className="hover:bg-blue-50 transition-colors duration-150">
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {product?.name || 'Producto'}
+                        {product?.is_small && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                            3x1$
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 capitalize">
+                        {item.masa}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 text-center font-medium">
+                        {item.quantity}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-blue-600 text-right font-semibold">
+                        ${subtotal.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => removeItem(index)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5 mx-auto" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Opciones de Entrega */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-6">
+        <div className="flex items-center mb-4">
+          <input
+            type="checkbox"
+            id="delivery"
+            checked={isDelivery}
+            onChange={(e) => setIsDelivery(e.target.checked)}
+            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="delivery" className="ml-3 text-sm font-medium text-gray-700">
+            ¿Entrega a domicilio?
+          </label>
+        </div>
+
+        {isDelivery && (
+          <div className="max-w-xs">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Costo de envío ($)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={deliveryCost}
+              onChange={(e) => setDeliveryCost(e.target.value)}
+              placeholder="0.00"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Total y Guardar */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <span className="text-2xl font-bold text-gray-800">Total:</span>
+          <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+            ${calculateTotal().toFixed(2)}
+          </span>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => onNavigate('orders')}
+            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg transition-all duration-300"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || items.length === 0}
+            className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+          >
+            {loading ? 'Guardando...' : editingOrder ? 'Actualizar Pedido' : 'Guardar Pedido'}
+          </button>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideDown {
+          from { transform: translateY(-10px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(10px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
+        .animate-slideDown { animation: slideDown 0.3s ease-out; }
+        .animate-slideUp { animation: slideUp 0.5s ease-out; }
+      `}</style>
+    </div>
+  );
+}
+
+export default NewOrder;
+/**
+ * ============================================
+ * DÍAS ABIERTOS - Gestión de Calendario
+ * ============================================
+ * Actualizado con iconos Lucide React
+ */
+
+import { useState, useEffect } from 'react';
+import { openDaysAPI } from '../services/api';
+import {
+  Calendar,
+  ArrowLeft,
+  Plus,
+  Check,
+  X as CloseIcon,
+  ToggleLeft,
+  ToggleRight,
+  CalendarDays,
+  Clock
+} from 'lucide-react';
+
+function OpenDays({ onNavigate }) {
+  const [days, setDays] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState('');
+
+  useEffect(() => {
+    loadDays();
+  }, []);
+
+  const loadDays = async () => {
+    try {
+      setLoading(true);
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const response = await openDaysAPI.getAll(startDate, endDate);
+      setDays(response.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggle = async (date, currentStatus) => {
+    try {
+      const cleanDate = date.split('T')[0];
+      await openDaysAPI.update(cleanDate, !currentStatus);
+      loadDays();
+    } catch (err) {
+      alert('Error actualizando día: ' + err.message);
+    }
+  };
+
+  const handleAddDay = async () => {
+    if (!selectedDate) {
+      alert('Selecciona una fecha');
+      return;
+    }
+
+    try {
+      const cleanDate = selectedDate.split('T')[0];
+      await openDaysAPI.update(cleanDate, true);
+
+      setSelectedDate('');
+      loadDays();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Calcular estadísticas
+  const openDaysCount = days.filter(d => d.is_open).length;
+  const closedDaysCount = days.filter(d => !d.is_open).length;
+
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-white to-blue-50 rounded-xl shadow-sm border border-blue-100 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-blue-100 p-2 rounded-lg">
+              <Calendar className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">Días Abiertos/Cerrados</h2>
+              <p className="text-sm text-gray-600">Control de operación del negocio</p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('dashboard')}
+            className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Volver</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Estadísticas */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium opacity-90">Días Abiertos</p>
+            <Check className="w-6 h-6 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">{openDaysCount}</p>
+          <div className="mt-2 text-xs opacity-80">Últimos 30 días</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-red-500 to-rose-600 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium opacity-90">Días Cerrados</p>
+            <CloseIcon className="w-6 h-6 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">{closedDaysCount}</p>
+          <div className="mt-2 text-xs opacity-80">Últimos 30 días</div>
+        </div>
+      </div>
+
+      {/* Agregar Día */}
+      <div className="bg-white rounded-xl shadow-lg border border-blue-100 p-6">
+        <h3 className="font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+          <CalendarDays className="w-5 h-5 text-blue-600" />
+          <span>Marcar Nuevo Día</span>
+        </h3>
+        <div className="flex gap-3">
+          <div className="flex-1 relative">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            />
+            <Clock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+          </div>
+          <button
+            onClick={handleAddDay}
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-6 py-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 shadow-md"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Agregar</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Lista de Días */}
+      <div className="bg-white rounded-xl shadow-lg border border-blue-100 overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-blue-100">
+          <h3 className="font-bold text-lg text-blue-900 flex items-center">
+            <CalendarDays className="w-5 h-5 mr-2" />
+            Historial de Días
+          </h3>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-blue-50">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-bold text-blue-900 uppercase tracking-wider">
+                  Fecha
+                </th>
+                <th className="px-6 py-4 text-center text-xs font-bold text-blue-900 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th className="px-6 py-4 text-center text-xs font-bold text-blue-900 uppercase tracking-wider">
+                  Acción
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {days.map((day, idx) => (
+                <tr
+                  key={day.id}
+                  className="hover:bg-blue-50 transition-colors duration-150 animate-fadeIn"
+                  style={{ animationDelay: `${idx * 0.03}s` }}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {new Date(day.date.split('T')[0]).toLocaleDateString('es-SV', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    {day.is_open ? (
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-sm space-x-1">
+                        <Check className="w-3 h-3" />
+                        <span>Abierto</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-red-400 to-rose-500 text-white shadow-sm space-x-1">
+                        <CloseIcon className="w-3 h-3" />
+                        <span>Cerrado</span>
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <button
+                      onClick={() => handleToggle(day.date, day.is_open)}
+                      className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-800 font-semibold text-sm transition-all hover:bg-blue-100 px-3 py-1.5 rounded-lg"
+                    >
+                      {day.is_open ? (
+                        <>
+                          <ToggleRight className="w-4 h-4" />
+                          <span>Cerrar</span>
+                        </>
+                      ) : (
+                        <>
+                          <ToggleLeft className="w-4 h-4" />
+                          <span>Abrir</span>
+                        </>
+                      )}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        {days.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-6 py-3 border-t border-blue-100">
+            <p className="text-sm text-gray-600">
+              Mostrando <span className="font-bold text-blue-700">{days.length}</span> días registrados
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Estado vacío */}
+      {days.length === 0 && (
+        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-blue-200">
+          <Calendar className="w-16 h-16 mx-auto text-blue-300 mb-4" />
+          <h3 className="text-xl font-bold text-blue-900 mb-2">No hay días registrados</h3>
+          <p className="text-blue-600 mb-4">Comienza marcando días de operación</p>
+          <button
+            onClick={() => document.querySelector('input[type="date"]').focus()}
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-2 px-6 rounded-lg transition-all inline-flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Marcar Primer Día</span>
+          </button>
+        </div>
+      )}
+
+      {/* Animaciones CSS */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn { 
+          animation: fadeIn 0.5s ease-out forwards;
+          opacity: 0;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default OpenDays;
+/**
+ * ============================================
+ * LISTA DE PEDIDOS - Ver Pedidos del Día
+ * ============================================
+ * Migrado a iconos de lucide-react
+ */
+
+import { useState, useEffect } from 'react';
+import { ordersAPI } from '../services/api';
+import { ShoppingBag, DollarSign, Edit, Trash2, Truck, Plus, Package } from 'lucide-react';
+
+function OrdersList({ onNavigate, selectedDate }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  useEffect(() => {
+    loadOrders();
+  }, [selectedDate]);
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await ordersAPI.getByDate(selectedDate);
+      setOrders(response.data || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Estás segura de eliminar este pedido amor? ')) return;
+    try {
+      setDeletingId(id);
+      await ordersAPI.delete(id);
+      await loadOrders();
+    } catch (err) {
+      alert('Error eliminando pedido: ' + err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleEdit = (order) => {
+    onNavigate('newOrder', { editOrder: order });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  const totalSales = orders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Pedidos del Día</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-SV', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+          </div>
+          <button
+            onClick={() => onNavigate('dashboard')}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            ← Volver
+          </button>
+        </div>
+      </div>
+
+      {/* Resumen */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-gradient-to-br from-blue-500 to-cyan-600 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm opacity-90 font-medium">Total de Pedidos</p>
+            <ShoppingBag className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-2xl font-bold mt-2">{orders.length}</p>
+        </div>
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm opacity-90 font-medium">Total de Ventas</p>
+            <DollarSign className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-2xl font-bold mt-2">${totalSales.toFixed(2)}</p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+          {error}
+        </div>
+      )}
+
+      {/* Lista de Pedidos */}
+      {orders.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-8 text-center">
+          <Package className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            No hay pedidos para este dia amor
+          </h3>
+          <p className="text-gray-600 mb-4">
+            No se encontraron pedidos para este día u.u
+          </p>
+          <button
+            onClick={() => onNavigate('newOrder')}
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
+          >
+            Crear Pedido
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {orders.map(order => (
+            <div key={order.id} className="bg-white rounded-xl shadow-sm border border-blue-50 overflow-hidden transform transition-all duration-300 hover:shadow-md">
+              {/* Header del pedido */}
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-6 py-4 border-b border-blue-100 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <span className="text-lg font-bold text-gray-800">
+                    Pedido #{order.id}
+                  </span>
+                  {order.is_delivery && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                      <Truck className="w-3 h-3 mr-1" />
+                      Entrega
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleEdit(order)}
+                    className="text-blue-600 hover:text-blue-800 font-semibold text-sm transition-colors flex items-center"
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(order.id)}
+                    disabled={deletingId === order.id}
+                    className="text-red-500 hover:text-red-700 font-semibold text-sm disabled:opacity-50 transition-colors flex items-center"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+
+              {/* Ítems del pedido */}
+              <div className="p-6">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-gray-500 uppercase">
+                    <tr>
+                      <th className="text-left pb-2">Producto</th>
+                      <th className="text-left pb-2">Masa</th>
+                      <th className="text-center pb-2">Cant.</th>
+                      <th className="text-right pb-2">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {order.items.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-blue-50 transition-colors">
+                        <td className="py-3">
+                          {item.product_name}
+                          {item.is_small && (
+                            <span className="ml-2 text-xs text-emerald-600">(3x1$)</span>
+                          )}
+                        </td>
+                        <td className="py-3 capitalize">{item.masa}</td>
+                        <td className="py-3 text-center">{item.quantity}</td>
+                        <td className="py-3 text-right font-semibold text-blue-600">
+                          ${parseFloat(item.line_total).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                    {order.is_delivery && order.delivery_cost > 0 && (
+                      <tr className="bg-indigo-50">
+                        <td className="py-3" colSpan="3">Costo de envío</td>
+                        <td className="py-3 text-right font-semibold text-indigo-600">
+                          ${parseFloat(order.delivery_cost).toFixed(2)}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Total */}
+                <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                  <span className="text-lg font-bold text-gray-800">Total:</span>
+                  <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                    ${parseFloat(order.total).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Botón flotante para nuevo pedido */}
+      <button
+        onClick={() => onNavigate('newOrder')}
+        className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
+      `}</style>
+    </div>
+  );
+}
+
+export default OrdersList;
+/**
+ * ============================================
+ * PRODUCTOS - Gestión de Productos
+ * ============================================
+ * Actualizado con iconos Lucide React
+ */
+
+import { useState, useEffect } from 'react';
+import { productsAPI } from '../services/api';
+import {
+  Plus,
+  X,
+  Edit2,
+  Trash2,
+  Save,
+  ArrowLeft,
+  Package,
+  DollarSign,
+  Tag
+} from 'lucide-react';
+
+function Products({ onNavigate }) {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    masa: 'maíz',
+    price: '',
+    is_small: false
+  });
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      const response = await productsAPI.getAll();
+      setProducts(response.data || []);
+    } catch (err) {
+      alert('Error cargando productos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editing) {
+        await productsAPI.update(editing.id, formData);
+      } else {
+        await productsAPI.create(formData);
+      }
+      resetForm();
+      loadProducts();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleEdit = (product) => {
+    setEditing(product);
+    setFormData({
+      name: product.name,
+      masa: product.masa || 'maíz',
+      price: product.price,
+      is_small: product.is_small
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Eliminar este producto?')) return;
+    try {
+      await productsAPI.delete(id);
+      loadProducts();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ name: '', masa: 'maíz', price: '', is_small: false });
+    setEditing(null);
+    setShowForm(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-white to-blue-50 rounded-xl shadow-sm border border-blue-100 p-6 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="bg-blue-100 p-2 rounded-lg">
+            <Package className="w-6 h-6 text-blue-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800">Productos</h2>
+        </div>
+        <button
+          onClick={() => onNavigate('dashboard')}
+          className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Volver</span>
+        </button>
+      </div>
+
+      {/* Botón Agregar */}
+      <button
+        onClick={() => setShowForm(!showForm)}
+        className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 shadow-lg"
+      >
+        {showForm ? (
+          <>
+            <X className="w-5 h-5" />
+            <span>Cancelar</span>
+          </>
+        ) : (
+          <>
+            <Plus className="w-5 h-5" />
+            <span>Agregar Producto</span>
+          </>
+        )}
+      </button>
+
+      {/* Formulario */}
+      {showForm && (
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg border border-blue-100 p-6 space-y-4 animate-slideDown">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+            <Tag className="w-5 h-5 text-blue-600" />
+            <span>{editing ? 'Editar Producto' : 'Nuevo Producto'}</span>
+          </h3>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del Producto</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Ej: Revueltas, Queso, etc."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Masa</label>
+            <select
+              value={formData.masa || ''}
+              onChange={(e) => setFormData({ ...formData, masa: e.target.value || null })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            >
+              <option value="">Sin masa (otros productos)</option>
+              <option value="maíz">Maíz </option>
+              <option value="arroz">Arroz </option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-1">
+              <DollarSign className="w-4 h-4" />
+              <span>Precio</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              placeholder="0.00"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              required
+            />
+          </div>
+
+          <div className="flex items-center space-x-2 p-3 bg-green-50 rounded-lg border border-green-200">
+            <input
+              type="checkbox"
+              id="is_small"
+              checked={formData.is_small}
+              onChange={(e) => setFormData({ ...formData, is_small: e.target.checked })}
+              className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+            />
+            <label htmlFor="is_small" className="text-sm font-medium text-green-800">
+              Aplica promoción 3x1$ (Pupusas pequeñas)
+            </label>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={resetForm}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-lg transition-all flex items-center justify-center space-x-2"
+            >
+              <X className="w-4 h-4" />
+              <span>Cancelar</span>
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-2.5 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center space-x-2 shadow-md"
+            >
+              <Save className="w-4 h-4" />
+              <span>{editing ? 'Actualizar' : 'Guardar'}</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Tabla de Productos */}
+      <div className="bg-white rounded-xl shadow-lg border border-blue-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gradient-to-r from-blue-50 to-cyan-50">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-bold text-blue-900 uppercase tracking-wider">
+                  Producto
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-blue-900 uppercase tracking-wider">
+                  Masa
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-bold text-blue-900 uppercase tracking-wider">
+                  Precio
+                </th>
+                <th className="px-6 py-4 text-center text-xs font-bold text-blue-900 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {products.map((product, idx) => (
+                <tr
+                  key={product.id}
+                  className="hover:bg-blue-50 transition-colors duration-150 animate-fadeIn"
+                  style={{ animationDelay: `${idx * 0.03}s` }}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <Package className="w-4 h-4 text-gray-400" />
+                      <span className="font-medium text-gray-900">{product.name}</span>
+                      {product.is_small && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-sm">
+                          3x1$
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-700 capitalize font-medium">{product.masa}</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold text-blue-700 bg-blue-100">
+                      ${parseFloat(product.price).toFixed(2)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="flex items-center justify-center space-x-3">
+                      <button
+                        onClick={() => handleEdit(product)}
+                        className="text-blue-600 hover:text-blue-800 transition-colors p-1 hover:bg-blue-100 rounded"
+                        title="Editar"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-100 rounded"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer de la tabla */}
+        {products.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-6 py-3 border-t border-blue-100">
+            <p className="text-sm text-gray-600">
+              Total de productos: <span className="font-bold text-blue-700">{products.length}</span>
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Estado vacío */}
+      {products.length === 0 && !loading && (
+        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-blue-200">
+          <Package className="w-16 h-16 mx-auto text-blue-300 mb-4" />
+          <h3 className="text-xl font-bold text-blue-900 mb-2">No hay productos registrados</h3>
+          <p className="text-blue-600 mb-4">Comienza agregando tu primer producto</p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-2 px-6 rounded-lg transition-all inline-flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Agregar Producto</span>
+          </button>
+        </div>
+      )}
+
+      {/* Animaciones CSS */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideDown {
+          from { transform: translateY(-10px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-fadeIn { 
+          animation: fadeIn 0.5s ease-out forwards;
+          opacity: 0;
+        }
+        .animate-slideDown { animation: slideDown 0.3s ease-out; }
+      `}</style>
+    </div>
+  );
+}
+
+export default Products;

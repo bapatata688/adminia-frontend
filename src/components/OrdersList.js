@@ -5,7 +5,7 @@
  * Migrado a iconos de lucide-react
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ordersAPI } from '../services/api';
 import { ShoppingBag, DollarSign, Edit, Trash2, Truck, Plus, Package } from 'lucide-react';
 
@@ -19,18 +19,19 @@ function OrdersList({ onNavigate, selectedDate }) {
     loadOrders();
   }, [selectedDate]);
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await ordersAPI.getByDate(selectedDate);
-      setOrders(response.data || []);
+      console.log(response.data)
+      setOrders(response.data.data || []);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('¿Estás segura de eliminar este pedido amor? ')) return;

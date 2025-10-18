@@ -5,7 +5,7 @@
  * Actualizado con iconos Lucide React
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { productsAPI } from '../services/api';
 import {
   Plus,
@@ -35,16 +35,16 @@ function Products({ onNavigate }) {
     loadProducts();
   }, []);
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       const response = await productsAPI.getAll();
-      setProducts(response.data || []);
+      setProducts(response.data.data || []);
     } catch (err) {
       alert('Error cargando productos');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
