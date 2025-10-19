@@ -1,12 +1,26 @@
 /**
  * ============================================
- * APP PRINCIPAL - RESPONSIVE
+ * APP PRINCIPAL - RESPONSIVE CON CHARTS
  * ============================================
  * Optimizado para móviles, tablets y desktops
+ * NUEVO: Integración de MonthlyCharts
  */
 
 import { useState, useEffect } from 'react';
-import { LogOut, User, Menu, X as CloseIcon, Store } from 'lucide-react';
+import {
+  LogOut,
+  User,
+  Menu,
+  X as CloseIcon,
+  Store,
+  BarChart3,
+  Home,
+  Package,
+  ShoppingCart,
+  ClipboardList,
+  FileText,
+  Calendar
+} from 'lucide-react';
 
 import Login from './components/Auth/Login';
 import Dashboard from './components/Dashboard';
@@ -85,7 +99,8 @@ function App() {
       orders: 'Pedidos del Día',
       products: 'Productos',
       report: 'Reporte Diario',
-      openDays: 'Días Abiertos'
+      openDays: 'Días Abiertos',
+      charts: 'Gráficos Mensuales'
     };
 
     const businessName = currentUser?.businessName || 'Sistema de Ventas';
@@ -198,6 +213,9 @@ function App() {
   const trialDaysRemaining = getTrialDaysRemaining();
   const showTrialWarning = trialDaysRemaining <= 5 && trialDaysRemaining > 0;
 
+  // Estado actual para resaltar botón activo
+  const isActiveView = (view) => currentView === view;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header Responsive */}
@@ -206,8 +224,7 @@ function App() {
           <div className="flex items-center justify-between">
             {/* Logo y nombre */}
             <div className="flex items-center space-x-2 md:space-x-3">
-              <Store className="w-6 h-6 text-primary" />
-              {/* <div className="text-2xl md:text-3xl">♥</div> */}
+              <Store className="w-6 h-6 md:w-7 md:h-7" />
               <div>
                 <h1 className="text-base md:text-xl font-bold truncate max-w-[150px] sm:max-w-none">
                   {currentUser?.businessName || 'Mi Negocio'}
@@ -226,9 +243,13 @@ function App() {
 
               <button
                 onClick={() => navigate('dashboard')}
-                className="text-sm bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-all"
+                className={`text-sm px-4 py-2 rounded-lg transition-all flex items-center space-x-2 ${isActiveView('dashboard')
+                    ? 'bg-white bg-opacity-30 font-semibold'
+                    : 'bg-white bg-opacity-10 hover:bg-opacity-20'
+                  }`}
               >
-                Inicio
+                <Home className="w-4 h-4" />
+                <span>Inicio</span>
               </button>
 
               {/* Menú de usuario */}
@@ -292,41 +313,91 @@ function App() {
         {showMobileMenu && (
           <div className="lg:hidden bg-blue-700 border-t border-blue-500 animate-slide-down">
             <div className="container mx-auto px-4 py-4 space-y-2">
+              {/* Dashboard */}
               <button
                 onClick={() => navigate('dashboard')}
-                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all text-sm font-medium flex items-center space-x-3 ${isActiveView('dashboard')
+                    ? 'bg-white bg-opacity-30'
+                    : 'bg-white bg-opacity-10 hover:bg-opacity-20'
+                  }`}
               >
-                🏠 Inicio
+                <Home className="w-5 h-5" />
+                <span>Dashboard</span>
               </button>
 
+              {/* Productos */}
               <button
                 onClick={() => navigate('products')}
-                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all text-sm font-medium flex items-center space-x-3 ${isActiveView('products')
+                    ? 'bg-white bg-opacity-30'
+                    : 'bg-white bg-opacity-10 hover:bg-opacity-20'
+                  }`}
               >
-                📦 Productos
+                <Package className="w-5 h-5" />
+                <span>Productos</span>
               </button>
 
+              {/* Nuevo Pedido */}
               <button
                 onClick={() => navigate('newOrder')}
-                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all text-sm font-medium flex items-center space-x-3 ${isActiveView('newOrder')
+                    ? 'bg-white bg-opacity-30'
+                    : 'bg-white bg-opacity-10 hover:bg-opacity-20'
+                  }`}
               >
-                ➕ Nuevo Pedido
+                <ShoppingCart className="w-5 h-5" />
+                <span>Nuevo Pedido</span>
               </button>
 
+              {/* Pedidos del Día */}
               <button
                 onClick={() => navigate('orders')}
-                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all text-sm font-medium flex items-center space-x-3 ${isActiveView('orders')
+                    ? 'bg-white bg-opacity-30'
+                    : 'bg-white bg-opacity-10 hover:bg-opacity-20'
+                  }`}
               >
-                📋 Pedidos del Día
+                <ClipboardList className="w-5 h-5" />
+                <span>Pedidos del Día</span>
               </button>
 
+              {/* Reportes */}
               <button
                 onClick={() => navigate('report')}
-                className="w-full text-left px-4 py-3 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-all text-sm font-medium"
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all text-sm font-medium flex items-center space-x-3 ${isActiveView('report')
+                    ? 'bg-white bg-opacity-30'
+                    : 'bg-white bg-opacity-10 hover:bg-opacity-20'
+                  }`}
               >
-                📊 Reportes
+                <FileText className="w-5 h-5" />
+                <span>Reportes</span>
               </button>
 
+              {/* Gráficos - NUEVO */}
+              <button
+                onClick={() => navigate('charts')}
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all text-sm font-medium flex items-center space-x-3 ${isActiveView('charts')
+                    ? 'bg-white bg-opacity-30'
+                    : 'bg-white bg-opacity-10 hover:bg-opacity-20'
+                  }`}
+              >
+                <BarChart3 className="w-5 h-5" />
+                <span>Gráficos Mensuales</span>
+              </button>
+
+              {/* Días Abiertos */}
+              <button
+                onClick={() => navigate('openDays')}
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all text-sm font-medium flex items-center space-x-3 ${isActiveView('openDays')
+                    ? 'bg-white bg-opacity-30'
+                    : 'bg-white bg-opacity-10 hover:bg-opacity-20'
+                  }`}
+              >
+                <Calendar className="w-5 h-5" />
+                <span>Días Abiertos</span>
+              </button>
+
+              {/* Separador */}
               <div className="border-t border-blue-500 pt-2 mt-2">
                 <div className="px-4 py-2 text-xs text-blue-100">
                   <p className="font-medium truncate">{currentUser?.email}</p>
@@ -400,7 +471,7 @@ function App() {
             opacity: 0;
           }
           to {
-            max-height: 500px;
+            max-height: 600px;
             opacity: 1;
           }
         }
