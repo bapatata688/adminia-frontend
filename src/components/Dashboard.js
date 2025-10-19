@@ -30,7 +30,6 @@ import {
   Package,
   BarChart3,
   Calendar,
-  RefreshCw,
   TrendingUp,
   AlertCircle,
   Store
@@ -116,20 +115,20 @@ function Dashboard({ onNavigate, selectedDate }) {
               })}
             </p>
           </div>
-          <button
-            onClick={loadDashboardData}
-            className="flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm md:text-base"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span className="hidden sm:inline">Actualizar</span>
-          </button>
-          <button
-            onClick={() => onNavigate('charts')}
-            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold py-3 md:py-4 px-3 md:px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl flex flex-col items-center justify-center space-y-1"
-          >
-            <BarChart3 className="w-5 h-5 md:w-6 md:h-6" />
-            <span className="text-xs md:text-sm">Gráficos</span>
-          </button>
+          {/* <button */}
+          {/* onClick={loadDashboardData} */}
+          {/* className="flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm md:text-base" */}
+          {/* > */}
+          {/* <RefreshCw className="w-4 h-4" /> */}
+          {/* <span className="hidden sm:inline">Actualizar</span> */}
+          {/* </button> */}
+          {/* <button */}
+          {/*   onClick={() => onNavigate('charts')} */}
+          {/*   className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold py-3 md:py-4 px-3 md:px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl flex flex-col items-center justify-center space-y-1" */}
+          {/* > */}
+          {/*   <BarChart3 className="w-5 h-5 md:w-6 md:h-6" /> */}
+          {/*   <span className="text-xs md:text-sm">Gráficos</span> */}
+          {/* </button> */}
         </div>
       </div>
 
