@@ -5,269 +5,314 @@
  * Actualizado con iconos Lucide React
  */
 
-import { useState, useEffect } from 'react';
+/**
+ * ============================================
+ * DÍAS ABIERTOS - Calendario Visual RESPONSIVE
+ * ============================================
+ * Nuevo diseño con calendario mensual interactivo
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import { openDaysAPI } from '../services/api';
 import {
   Calendar,
-  ArrowLeft,
-  Plus,
+  ChevronLeft,
+  ChevronRight,
   Check,
-  X as CloseIcon,
-  ToggleLeft,
-  ToggleRight,
-  CalendarDays,
-  Clock
+  X,
+  ArrowLeft,
+  AlertCircle,
+  Clock,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 
 function OpenDays({ onNavigate }) {
-  const [days, setDays] = useState([]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [openDays, setOpenDays] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState('');
+  const [error, setError] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
 
   useEffect(() => {
-    loadDays();
-  }, []);
+    loadOpenDays();
+  }, [currentDate]);
 
-  const loadDays = async () => {
+  const loadOpenDays = useCallback(async () => {
     try {
       setLoading(true);
-      const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      setError(null);
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      const startDate = new Date(year, month, 1).toISOString().split('T')[0];
+      const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+
+      console.log('📅 Cargando días:', startDate, 'a', endDate);
+
       const response = await openDaysAPI.getAll(startDate, endDate);
-      setDays(response.data.data || []);
+      console.log('✅ Días cargados:', response.data);
+
+      const daysList = response.data?.data || [];
+      setOpenDays(daysList);
+
     } catch (err) {
-      console.error(err);
+      setError(err.message);
+      console.error('❌ Error:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentDate]);
 
-  const handleToggle = async (date, currentStatus) => {
+  const handleToggleDay = async (dateStr) => {
     try {
-      const cleanDate = date.split('T')[0];
-      await openDaysAPI.update(cleanDate, !currentStatus);
-      loadDays();
+      const existing = openDays.find(d => d.date === dateStr);
+      const newStatus = existing ? !existing.is_open : false;
+
+      await openDaysAPI.update(dateStr, newStatus);
+      await loadOpenDays();
+
     } catch (err) {
       alert('Error actualizando día: ' + err.message);
     }
   };
 
-  const handleAddDay = async () => {
-    if (!selectedDate) {
-      alert('Selecciona una fecha');
-      return;
+  const getDayStatus = (dateStr) => {
+    const day = openDays.find(d => d.date === dateStr);
+    if (!day) return 'open'; // Por defecto abierto
+    return day.is_open ? 'open' : 'closed';
+  };
+
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  // Generar días del calendario
+  const generateCalendarDays = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const startingDayOfWeek = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
+
+    const days = [];
+
+    // Días del mes anterior (espacios vacíos)
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
     }
 
-    try {
-      const cleanDate = selectedDate.split('T')[0];
-      await openDaysAPI.update(cleanDate, true);
+    // Días del mes actual
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      const dateStr = date.toISOString().split('T')[0];
+      const status = getDayStatus(dateStr);
+      const isToday = dateStr === new Date().toISOString().split('T')[0];
 
-      setSelectedDate('');
-      loadDays();
-    } catch (err) {
-      alert('Error: ' + err.message);
+      days.push({
+        day,
+        date: dateStr,
+        status,
+        isToday
+      });
     }
+
+    return days;
+  };
+
+  const calendarDays = generateCalendarDays();
+  const monthName = currentDate.toLocaleDateString('es-SV', { month: 'long', year: 'numeric' });
+
+  const stats = {
+    open: openDays.filter(d => d.is_open).length,
+    closed: openDays.filter(d => !d.is_open).length,
+    total: openDays.length
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 text-sm">Cargando calendario...</p>
+        </div>
       </div>
     );
   }
 
-  // Calcular estadísticas
-  const openDaysCount = days.filter(d => d.is_open).length;
-  const closedDaysCount = days.filter(d => !d.is_open).length;
-
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6 animate-fadeIn px-2 md:px-0">
       {/* Header */}
-      <div className="bg-gradient-to-r from-white to-blue-50 rounded-xl shadow-sm border border-blue-100 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-4 md:p-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-blue-100 p-2 rounded-lg">
-              <Calendar className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">Días Abiertos/Cerrados</h2>
-              <p className="text-sm text-gray-600">Control de operación del negocio</p>
-            </div>
-          </div>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center">
+            <Calendar className="w-5 h-5 md:w-6 md:h-6 mr-2 text-blue-600" />
+            Días Abiertos
+          </h2>
           <button
             onClick={() => onNavigate('dashboard')}
-            className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors"
+            className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors text-sm md:text-base"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Volver</span>
+            <ArrowLeft className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="hidden sm:inline">Volver</span>
           </button>
         </div>
       </div>
 
-      {/* Estadísticas */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium opacity-90">Días Abiertos</p>
-            <Check className="w-6 h-6 opacity-80" />
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{error}</p>
           </div>
-          <p className="text-3xl font-bold">{openDaysCount}</p>
-          <div className="mt-2 text-xs opacity-80">Últimos 30 días</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-red-500 to-rose-600 text-white rounded-xl shadow-lg p-5 transform transition-all duration-300 hover:scale-105">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium opacity-90">Días Cerrados</p>
-            <CloseIcon className="w-6 h-6 opacity-80" />
-          </div>
-          <p className="text-3xl font-bold">{closedDaysCount}</p>
-          <div className="mt-2 text-xs opacity-80">Últimos 30 días</div>
-        </div>
-      </div>
-
-      {/* Agregar Día */}
-      <div className="bg-white rounded-xl shadow-lg border border-blue-100 p-6">
-        <h3 className="font-semibold text-gray-800 mb-4 flex items-center space-x-2">
-          <CalendarDays className="w-5 h-5 text-blue-600" />
-          <span>Marcar Nuevo Día</span>
-        </h3>
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-            />
-            <Clock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-          </div>
-          <button
-            onClick={handleAddDay}
-            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-6 py-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 shadow-md"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Agregar</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Lista de Días */}
-      <div className="bg-white rounded-xl shadow-lg border border-blue-100 overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-blue-100">
-          <h3 className="font-bold text-lg text-blue-900 flex items-center">
-            <CalendarDays className="w-5 h-5 mr-2" />
-            Historial de Días
-          </h3>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-blue-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-blue-900 uppercase tracking-wider">
-                  Fecha
-                </th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-blue-900 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-blue-900 uppercase tracking-wider">
-                  Acción
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {days.map((day, idx) => (
-                <tr
-                  key={day.id}
-                  className="hover:bg-blue-50 transition-colors duration-150 animate-fadeIn"
-                  style={{ animationDelay: `${idx * 0.03}s` }}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {new Date(day.date.split('T')[0]).toLocaleDateString('es-SV', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {day.is_open ? (
-                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-sm space-x-1">
-                        <Check className="w-3 h-3" />
-                        <span>Abierto</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-red-400 to-rose-500 text-white shadow-sm space-x-1">
-                        <CloseIcon className="w-3 h-3" />
-                        <span>Cerrado</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <button
-                      onClick={() => handleToggle(day.date, day.is_open)}
-                      className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-800 font-semibold text-sm transition-all hover:bg-blue-100 px-3 py-1.5 rounded-lg"
-                    >
-                      {day.is_open ? (
-                        <>
-                          <ToggleRight className="w-4 h-4" />
-                          <span>Cerrar</span>
-                        </>
-                      ) : (
-                        <>
-                          <ToggleLeft className="w-4 h-4" />
-                          <span>Abrir</span>
-                        </>
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer */}
-        {days.length > 0 && (
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-6 py-3 border-t border-blue-100">
-            <p className="text-sm text-gray-600">
-              Mostrando <span className="font-bold text-blue-700">{days.length}</span> días registrados
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Estado vacío */}
-      {days.length === 0 && (
-        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-blue-200">
-          <Calendar className="w-16 h-16 mx-auto text-blue-300 mb-4" />
-          <h3 className="text-xl font-bold text-blue-900 mb-2">No hay días registrados</h3>
-          <p className="text-blue-600 mb-4">Comienza marcando días de operación</p>
-          <button
-            onClick={() => document.querySelector('input[type="date"]').focus()}
-            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-2 px-6 rounded-lg transition-all inline-flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Marcar Primer Día</span>
-          </button>
         </div>
       )}
 
+      {/* Estadísticas */}
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-xl shadow-lg p-4 md:p-5 text-center">
+          <CheckCircle2 className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 opacity-80" />
+          <p className="text-2xl md:text-3xl font-bold">{stats.open}</p>
+          <p className="text-xs md:text-sm opacity-90 mt-1">Días Abiertos</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-red-500 to-rose-600 text-white rounded-xl shadow-lg p-4 md:p-5 text-center">
+          <XCircle className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 opacity-80" />
+          <p className="text-2xl md:text-3xl font-bold">{stats.closed}</p>
+          <p className="text-xs md:text-sm opacity-90 mt-1">Días Cerrados</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-500 to-cyan-600 text-white rounded-xl shadow-lg p-4 md:p-5 text-center">
+          <Clock className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 opacity-80" />
+          <p className="text-2xl md:text-3xl font-bold">{stats.total}</p>
+          <p className="text-xs md:text-sm opacity-90 mt-1">Configurados</p>
+        </div>
+      </div>
+
+      {/* Controles del Calendario */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-50 p-4 md:p-6">
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={goToPreviousMonth}
+            className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-gray-600" />
+          </button>
+
+          <div className="text-center">
+            <h3 className="text-lg md:text-xl font-bold text-gray-800 capitalize">{monthName}</h3>
+            <button
+              onClick={goToToday}
+              className="text-xs md:text-sm text-blue-600 hover:text-blue-800 mt-1"
+            >
+              Ir a hoy
+            </button>
+          </div>
+
+          <button
+            onClick={goToNextMonth}
+            className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-600" />
+          </button>
+        </div>
+
+        {/* Leyenda */}
+        <div className="flex flex-wrap gap-3 md:gap-4 justify-center mb-6 text-xs md:text-sm">
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 rounded bg-emerald-500"></div>
+            <span className="text-gray-700">Abierto</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 rounded bg-red-500"></div>
+            <span className="text-gray-700">Cerrado</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 rounded bg-blue-500"></div>
+            <span className="text-gray-700">Hoy</span>
+          </div>
+        </div>
+
+        {/* Calendario */}
+        <div className="grid grid-cols-7 gap-1 md:gap-2">
+          {/* Encabezados de días */}
+          {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day, idx) => (
+            <div
+              key={idx}
+              className="text-center py-2 text-xs md:text-sm font-bold text-gray-600"
+            >
+              <span className="hidden sm:inline">{day}</span>
+              <span className="sm:hidden">{day[0]}</span>
+            </div>
+          ))}
+
+          {/* Días del mes */}
+          {calendarDays.map((dayInfo, idx) => {
+            if (!dayInfo) {
+              return <div key={`empty-${idx}`} className="aspect-square"></div>;
+            }
+
+            const { day, date, status, isToday } = dayInfo;
+
+            return (
+              <button
+                key={date}
+                onClick={() => handleToggleDay(date)}
+                className={`
+                  aspect-square rounded-lg md:rounded-xl transition-all duration-300 transform hover:scale-105 relative
+                  flex flex-col items-center justify-center
+                  ${isToday
+                    ? 'bg-gradient-to-br from-blue-500 to-cyan-600 text-white ring-2 ring-blue-300 ring-offset-2'
+                    : status === 'closed'
+                      ? 'bg-gradient-to-br from-red-500 to-rose-600 text-white hover:from-red-600 hover:to-rose-700'
+                      : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700'
+                  }
+                  shadow-md hover:shadow-lg
+                `}
+              >
+                <span className="text-sm md:text-base font-bold">{day}</span>
+                <div className="absolute bottom-1 right-1">
+                  {status === 'closed' ? (
+                    <X className="w-3 h-3 md:w-4 md:h-4 opacity-70" />
+                  ) : (
+                    <Check className="w-3 h-3 md:w-4 md:h-4 opacity-70" />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Instrucciones */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+          <p className="text-xs md:text-sm text-blue-800">
+            <strong>Instrucciones:</strong> Haz clic en cualquier día para marcarlo como abierto o cerrado.
+            Los días marcados como cerrados no permitirán registrar ventas.
+          </p>
+        </div>
+      </div>
+
       {/* Animaciones CSS */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         .animate-fadeIn { 
-          animation: fadeIn 0.5s ease-out forwards;
-          opacity: 0;
+          animation: fadeIn 0.5s ease-out; 
         }
       `}</style>
     </div>

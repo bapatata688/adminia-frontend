@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { LogOut, User, Menu, X as CloseIcon } from 'lucide-react';
+import { LogOut, User, Menu, X as CloseIcon, Store } from 'lucide-react';
 
 import Login from './components/Auth/Login';
 import Dashboard from './components/Dashboard';
@@ -15,6 +15,7 @@ import OrdersList from './components/OrdersList';
 import Products from './components/Products';
 import DailyReport from './components/DailyReport';
 import OpenDays from './components/OpenDays';
+import MonthlyCharts from './components/MonthlyCharts';
 
 import {
   isAuthenticated,
@@ -159,6 +160,8 @@ function App() {
             onDateChange={setSelectedDate}
           />
         );
+      case 'charts':
+        return <MonthlyCharts onNavigate={navigate} />;
       case 'openDays':
         return <OpenDays onNavigate={navigate} />;
       default:
@@ -203,7 +206,8 @@ function App() {
           <div className="flex items-center justify-between">
             {/* Logo y nombre */}
             <div className="flex items-center space-x-2 md:space-x-3">
-              <div className="text-2xl md:text-3xl">♥</div>
+              <Store className="w-6 h-6 text-primary" />
+              {/* <div className="text-2xl md:text-3xl">♥</div> */}
               <div>
                 <h1 className="text-base md:text-xl font-bold truncate max-w-[150px] sm:max-w-none">
                   {currentUser?.businessName || 'Mi Negocio'}
