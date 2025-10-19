@@ -1,5 +1,12 @@
 /**
  * ============================================
+ * APP PRINCIPAL - RESPONSIVE
+ * ============================================
+ * Optimizado para móviles, tablets y desktops
+ */
+
+/**
+ * ============================================
  * APP PRINCIPAL - RESPONSIVE CON CHARTS
  * ============================================
  * Optimizado para móviles, tablets y desktops
